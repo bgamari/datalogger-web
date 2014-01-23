@@ -1,4 +1,5 @@
-module DataLogger ( open
+module DataLogger ( DataLogger
+                  , open
                     -- * Simple queries
                   , getVersion
                   , getSampleCount

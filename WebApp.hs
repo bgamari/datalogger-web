@@ -6,10 +6,11 @@ import Control.Error
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as TL
 import Data.Monoid       
-import Control.Monad (forM_)
+import Control.Monad (forM_, when)
 import Network.HTTP.Types.Status (status500)
 import Data.Aeson (ToJSON(..))
 import qualified Data.Aeson as JSON
+import Data.Time.Clock.POSIX (getPOSIXTime)
 
 main = do 
     Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
@@ -37,7 +38,9 @@ routes dl = do
 
     put "/:device/start" $ do
         device <- param "device"
-        liftIO $ runEitherT $ DL.set dl DL.acquiring True
+        liftIO $ runEitherT $ do
+            checkRTCTime dl
+            DL.set dl DL.acquiring True
         json [("device", device), ("acquiring" :: String, "true" :: TL.Text)]
     put "/:device/stop" $ do
         device <- param "device"
@@ -48,3 +51,10 @@ routes dl = do
         Right version <- liftIO $ runEitherT $ DL.getVersion dl
         html $ "<h1>Hello World</h1>"<>TL.pack version
 
+-- | Check that the RTC time has been set    
+checkRTCTime :: DL.DataLogger -> EitherT String IO ()
+checkRTCTime dl = do
+    t <- DL.get dl DL.rtcTime
+    when (t == 0) $ do
+      realTime <- liftIO getPOSIXTime
+      DL.set dl DL.rtcTime (round $ realToFrac realTime)
