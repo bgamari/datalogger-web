@@ -5,6 +5,9 @@ module DataLogger ( findDataLoggers
                   , getVersion
                   , getSampleCount
                   , getDeviceId
+                    -- * Fetching samples
+                  , Sample(..)
+                  , SensorID(..)
                   , getSamples
                     -- * Settings
                   , Setting
