@@ -2,12 +2,20 @@ module DataLogger ( open
                   , getVersion
                   , getSampleCount
                   , getDeviceId
+                    -- * Settings
+                  , get
+                  , set
+                  , samplePeriod
+                  , rtcTime
+                  , acquiring
+                  , acquireOnBoot
                   ) where
 
 import qualified Data.Map as M
 import Data.Maybe (catMaybes)
-import Control.Applicative ((<$>))
+import Control.Applicative (pure, (<$>))
 import Control.Error
+import Control.Monad (void)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
 import System.IO       
@@ -19,6 +27,7 @@ open :: FilePath -> EitherT String IO DataLogger
 open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
     let dl = DataLogger h
+    -- Make sure things are working properly
     v <- getVersion dl
     return dl
     
@@ -83,3 +92,61 @@ getDeviceId :: DataLogger -> EitherT String IO String
 getDeviceId dl = do
     writeCmd dl "I"
     readReplyValue dl "device id"
+
+showBool :: Bool -> String
+showBool True  = "1"
+showBool False = "0"
+         
+readBool :: String -> Either String Bool
+readBool "1" = Right True
+readBool "0" = Right False
+readBool  a  = Left ("Unexpected boolean value: "++a)
+    
+data Setting a = Setting { sCommand :: String
+                         , sName    :: String
+                         , sRead    :: String -> Either String a
+                         , sShow    :: a -> String
+                         }
+               
+set :: DataLogger -> Setting a -> a -> EitherT String IO ()
+set dl s value = do
+    writeCmd dl (sCommand s++"="++sShow s value)
+    void $ readReplyValue dl (sName s)
+    
+get :: DataLogger -> Setting a -> EitherT String IO a
+get dl s = do
+    writeCmd dl (sCommand s)
+    reply <- readReplyValue dl (sName s)
+    hoistEither $ sRead s reply
+
+samplePeriod :: Setting Int
+samplePeriod =
+    Setting { sCommand = "T"
+            , sName    = "sample period"
+            , sRead    = pure . read
+            , sShow    = show
+            }
+             
+rtcTime :: Setting Int
+rtcTime =
+    Setting { sCommand = "t"
+            , sName    = "RTC time"
+            , sRead    = pure . read
+            , sShow    = show
+            }
+    
+acquiring :: Setting Bool
+acquiring =
+    Setting { sCommand = "a"
+            , sName    = "acquire"
+            , sRead    = readBool
+            , sShow    = showBool
+            }
+
+acquireOnBoot :: Setting Bool
+acquireOnBoot =
+    Setting { sCommand = "B"
+            , sName    = "acquire on boot"
+            , sRead    = readBool
+            , sShow    = showBool
+            }
