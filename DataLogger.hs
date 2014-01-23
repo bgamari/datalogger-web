@@ -71,7 +71,7 @@ readReplyValue dl key = do
 
 getVersion :: DataLogger -> EitherT String IO String
 getVersion dl = do
-    writeCmd dl "v"
+    writeCmd dl "V"
     readReplyValue dl "version"
 
 getSampleCount :: DataLogger -> EitherT String IO Int
@@ -83,4 +83,3 @@ getDeviceId :: DataLogger -> EitherT String IO String
 getDeviceId dl = do
     writeCmd dl "I"
     readReplyValue dl "device id"
-
