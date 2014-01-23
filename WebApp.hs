@@ -21,7 +21,7 @@ main = do
    
 getSetting :: ToJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
 getSetting dl name setting =
-    get (capture $ "/:device/:"<>name) $ do
+    get (capture $ "/:device/"<>name) $ do
         device <- param "device" :: ActionM String
         value <- liftIO $ runEitherT $ DL.get dl setting
         case value of
@@ -36,7 +36,7 @@ getSetting dl name setting =
 
 putSetting :: FromJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
 putSetting dl name setting =
-    put (capture $ "/:device/:"<>name) $ do
+    put (capture $ "/:device/"<>name) $ do
         device <- param "device" :: ActionM String
         value <- jsonData
         liftIO $ runEitherT $ DL.set dl setting value
