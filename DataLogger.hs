@@ -1,4 +1,5 @@
-module DataLogger ( DataLogger
+module DataLogger ( findDataLoggers
+                  , DataLogger
                   , open
                     -- * Simple queries
                   , getVersion
@@ -22,7 +23,19 @@ import Control.Monad (void)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
 import System.IO       
-import Data.Char (isSpace)
+import Data.Char (isSpace, isDigit)
+import Data.List (isSuffixOf)
+import System.Directory (getDirectoryContents)       
+import System.FilePath ((</>))       
+
+-- | Find possible data logger devices       
+findDataLoggers :: IO [FilePath]
+findDataLoggers = do
+    let root = "/dev"                
+    devices <- getDirectoryContents root
+    return $ map (root </>) $ filter isACM devices
+  where
+    isACM = isSuffixOf "ttyACM" . reverse . dropWhile isDigit . reverse
 
 newtype DataLogger = DataLogger Handle
 

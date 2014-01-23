@@ -15,6 +15,7 @@ import DataLogger (DataLogger)
 import qualified DataLogger as DL
 
 main = do 
+    DL.findDataLoggers >>= print
     Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
     scotty 3000 $ routes dl
    
