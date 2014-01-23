@@ -5,6 +5,7 @@ module DataLogger ( findDataLoggers
                   , getVersion
                   , getSampleCount
                   , getDeviceId
+                  , getSamples
                     -- * Settings
                   , Setting
                   , get
@@ -17,14 +18,14 @@ module DataLogger ( findDataLoggers
 
 import qualified Data.Map as M
 import Data.Maybe (catMaybes)
-import Control.Applicative (pure, (<$>))
+import Control.Applicative (pure, (<$>), (<*>))
 import Control.Error
-import Control.Monad (void)
+import Control.Monad (void, when)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
 import System.IO       
 import Data.Char (isSpace, isDigit)
-import Data.List (isSuffixOf)
+import Data.List (isSuffixOf, intercalate)
 import System.Directory (getDirectoryContents)       
 import System.FilePath ((</>))       
 
@@ -108,6 +109,32 @@ getDeviceId :: DataLogger -> EitherT String IO String
 getDeviceId dl = do
     writeCmd dl "I"
     readReplyValue dl "device id"
+
+newtype SensorID = SID Int
+                 deriving (Show, Ord, Eq)
+
+data Sample = Sample { sampleTime   :: Integer
+                     , sampleSensor :: SensorID
+                     , sampleValue  :: Float
+                     }
+            deriving (Show)
+
+getSamples :: DataLogger -> Int -> Int -> EitherT String IO [Sample]
+getSamples dl start count = do
+    writeCmd dl $ intercalate " " ["g", show start, show count]
+    reply <- readReply dl
+    let (samples, errors) = partitionEithers $ map parseSample reply
+    when (not $ null errors)
+      $ liftIO $ print errors
+    return samples
+  where
+    parseSample l =
+      case words l of
+        [time, sid, val]  ->
+            runEitherT $ 
+            Sample <$> tryRead "Error parsing time" time
+                   <*> fmap SID (tryRead "Error parsing sensor ID" sid)
+                   <*> tryRead "Error parsing value" val
 
 showBool :: Bool -> String
 showBool True  = "1"
