@@ -126,7 +126,7 @@ getSamples :: DataLogger -> Int -> Int -> EitherT String IO [Sample]
 getSamples dl start count = do
     writeCmd dl $ intercalate " " ["g", show start, show count]
     reply <- readReply dl
-    let (samples, errors) = partitionEithers $ map parseSample reply
+    let (errors, samples) = partitionEithers $ map parseSample reply
     when (not $ null errors)
       $ liftIO $ print errors
     return samples
