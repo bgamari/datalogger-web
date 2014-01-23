@@ -46,7 +46,8 @@ getPutSetting :: (ToJSON a, FromJSON a)
 getPutSetting dl name setting = do
     getSetting dl name setting              
     putSetting dl name setting
-    
+
+routes :: DataLogger -> ScottyM () 
 routes dl = do
     getPutSetting dl "acquiring" DL.acquiring
     getPutSetting dl "sample-period" DL.samplePeriod
@@ -59,6 +60,7 @@ routes dl = do
             checkRTCTime dl
             DL.set dl DL.acquiring True
         json [("device", device), ("acquiring" :: String, "true" :: TL.Text)]
+
     put "/:device/stop" $ do
         device <- param "device"
         liftIO $ runEitherT $ DL.set dl DL.acquiring False
