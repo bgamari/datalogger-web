@@ -1,40 +1,57 @@
-{-# LANGUAGE OverloadedStrings, ExistentialQuantification, RankNTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
                 
 import Web.Scotty                
-import qualified DataLogger as DL
 import Control.Error
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as TL
 import Data.Monoid       
 import Control.Monad (forM_, when)
 import Network.HTTP.Types.Status (status500)
-import Data.Aeson (ToJSON(..))
+import Data.Aeson (ToJSON(..), FromJSON(..))
 import qualified Data.Aeson as JSON
 import Data.Time.Clock.POSIX (getPOSIXTime)
+
+import DataLogger (DataLogger)
+import qualified DataLogger as DL
 
 main = do 
     Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
     scotty 3000 $ routes dl
    
-data JSONSetting = forall a. ToJSON a => JS (DL.Setting a)
+getSetting :: ToJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
+getSetting dl name setting =
+    get (capture $ "/:device/:"<>name) $ do
+        device <- param "device" :: ActionM String
+        value <- liftIO $ runEitherT $ DL.get dl setting
+        case value of
+          Left error  -> do
+            text $ TL.pack error
+            status status500 
+          Right val   -> do
+            json [ ("device" :: String, toJSON device :: JSON.Value)
+                 , ("setting", toJSON name)
+                 , ("value", toJSON val)
+                 ]
 
-loggerSettings :: [(String, JSONSetting)]
-loggerSettings = [("acquiring", JS DL.acquiring)]
-
+putSetting :: FromJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
+putSetting dl name setting =
+    put (capture $ "/:device/:"<>name) $ do
+        device <- param "device" :: ActionM String
+        value <- jsonData
+        liftIO $ runEitherT $ DL.set dl setting value
+        return ()
+    
+getPutSetting :: (ToJSON a, FromJSON a)
+              => DataLogger -> String -> DL.Setting a -> ScottyM ()
+getPutSetting dl name setting = do
+    getSetting dl name setting              
+    putSetting dl name setting
+    
 routes dl = do
-    forM_ loggerSettings $ \(name, JS setting)->do
-        get (capture $ "/:device/:"<>name) $ do
-            device <- param "device" :: ActionM String
-            value <- liftIO $ runEitherT $ DL.get dl DL.acquiring
-            case value of
-              Left error  -> do
-                 text $ TL.pack error
-                 status status500 
-              Right val   -> do
-                 json [ ("device" :: String, toJSON device :: JSON.Value)
-                      , ("setting", toJSON name)
-                      , ("value", toJSON val)
-                      ]
+    getPutSetting dl "acquiring" DL.acquiring
+    getPutSetting dl "sample-period" DL.samplePeriod
+    getPutSetting dl "rtc-time" DL.rtcTime
+    getPutSetting dl "acquire-on-boot" DL.acquireOnBoot
 
     put "/:device/start" $ do
         device <- param "device"
@@ -47,12 +64,12 @@ routes dl = do
         liftIO $ runEitherT $ DL.set dl DL.acquiring False
         json [("device", device), ("acquiring" :: String, "false" :: TL.Text)]
 
-    get "/hello-world" $ do
+    get "/" $ do
         Right version <- liftIO $ runEitherT $ DL.getVersion dl
         html $ "<h1>Hello World</h1>"<>TL.pack version
 
 -- | Check that the RTC time has been set    
-checkRTCTime :: DL.DataLogger -> EitherT String IO ()
+checkRTCTime :: DataLogger -> EitherT String IO ()
 checkRTCTime dl = do
     t <- DL.get dl DL.rtcTime
     when (t == 0) $ do
