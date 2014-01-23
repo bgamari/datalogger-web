@@ -1,8 +1,10 @@
 module DataLogger ( open
+                    -- * Simple queries
                   , getVersion
                   , getSampleCount
                   , getDeviceId
                     -- * Settings
+                  , Setting
                   , get
                   , set
                   , samplePeriod
@@ -138,7 +140,7 @@ rtcTime =
 acquiring :: Setting Bool
 acquiring =
     Setting { sCommand = "a"
-            , sName    = "acquire"
+            , sName    = "acquiring"
             , sRead    = readBool
             , sShow    = showBool
             }

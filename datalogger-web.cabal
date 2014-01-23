@@ -1,0 +1,27 @@
+name:                datalogger-web
+version:             0.1.0.0
+synopsis:            A web interface for interacting with data-logger
+-- description:         
+license:             BSD3
+license-file:        LICENSE
+author:              Ben Gamari
+maintainer:          bgamari.foss@gmail.com
+-- copyright:           
+-- category:            
+build-type:          Simple
+cabal-version:       >=1.10
+
+executable datalogger-web
+  main-is:             WebApp.hs
+  other-modules:       DataLogger
+  other-extensions:    OverloadedStrings, ExistentialQuantification, RankNTypes
+  build-depends:       base >=4.7 && <4.8,
+                       containers >=0.5 && <0.6,
+                       errors >=1.4 && <1.5,
+                       transformers >=0.3 && <0.4,
+                       serialport >=0.4 && <0.5,
+                       scotty >=0.6 && <0.7,
+                       text >=1.1 && <1.2,
+                       http-types >=0.8 && <0.9,
+                       aeson >=0.7 && <0.8
+  default-language:    Haskell2010

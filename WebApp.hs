@@ -1,17 +1,50 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, ExistentialQuantification, RankNTypes #-}
                 
 import Web.Scotty                
 import qualified DataLogger as DL
 import Control.Error
 import Control.Monad.IO.Class
+import qualified Data.Text.Lazy as TL
+import Data.Monoid       
+import Control.Monad (forM_)
+import Network.HTTP.Types.Status (status500)
+import Data.Aeson (ToJSON(..))
+import qualified Data.Aeson as JSON
 
-       {-
-main = scotty 3000 $ do
+main = do 
+    Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
+    scotty 3000 $ routes dl
+   
+data JSONSetting = forall a. ToJSON a => JS (DL.Setting a)
+
+loggerSettings :: [(String, JSONSetting)]
+loggerSettings = [("acquiring", JS DL.acquiring)]
+
+routes dl = do
+    forM_ loggerSettings $ \(name, JS setting)->do
+        get (capture $ "/:device/:"<>name) $ do
+            device <- param "device" :: ActionM String
+            value <- liftIO $ runEitherT $ DL.get dl DL.acquiring
+            case value of
+              Left error  -> do
+                 text $ TL.pack error
+                 status status500 
+              Right val   -> do
+                 json [ ("device" :: String, toJSON device :: JSON.Value)
+                      , ("setting", toJSON name)
+                      , ("value", toJSON val)
+                      ]
+
+    put "/:device/start" $ do
+        device <- param "device"
+        liftIO $ runEitherT $ DL.set dl DL.acquiring True
+        json [("device", device), ("acquiring" :: String, "true" :: TL.Text)]
+    put "/:device/stop" $ do
+        device <- param "device"
+        liftIO $ runEitherT $ DL.set dl DL.acquiring False
+        json [("device", device), ("acquiring" :: String, "false" :: TL.Text)]
+
     get "/hello-world" $ do
-        html "<h1>Hello World</h1>"
+        Right version <- liftIO $ runEitherT $ DL.getVersion dl
+        html $ "<h1>Hello World</h1>"<>TL.pack version
 
-    -}
-    
-main = runEitherT $ do
-    dl <- DL.open "/dev/ttyACM0"
-    DL.getVersion dl >>= liftIO . print
