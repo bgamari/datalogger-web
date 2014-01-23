@@ -7,7 +7,7 @@ import qualified Data.Text.Lazy as TL
 import Data.Monoid       
 import Control.Monad (forM_, when)
 import Network.HTTP.Types.Status (status500)
-import Data.Aeson (ToJSON(..), FromJSON(..))
+import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
 import qualified Data.Aeson as JSON
 import Data.Time.Clock.POSIX (getPOSIXTime)
 
@@ -47,6 +47,13 @@ getPutSetting :: (ToJSON a, FromJSON a)
 getPutSetting dl name setting = do
     getSetting dl name setting              
     putSetting dl name setting
+
+instance ToJSON DL.Sample where
+    toJSON s =
+      JSON.object [ "time"   .= DL.sampleTime s
+                  , "sensor" .= case DL.sampleSensor s of DL.SID n -> n
+                  , "value"  .= DL.sampleValue s
+                  ]
 
 routes :: DataLogger -> ScottyM () 
 routes dl = do
