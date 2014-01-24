@@ -10,12 +10,12 @@ import Network.HTTP.Types.Status (status500)
 import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
 import qualified Data.Aeson as JSON
 import Data.Time.Clock.POSIX (getPOSIXTime)
+import Control.Concurrent.STM       
 
 import DataLogger (DataLogger)
 import qualified DataLogger as DL
 
 main = do 
-    DL.findDataLoggers >>= print
     Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
     scotty 3000 $ routes dl
    
@@ -81,9 +81,10 @@ routes dl = do
           Left error    -> do html "<h1>Error fetching samples</h1>"
                               status status500
 
-    get "/" $ do
-        Right version <- liftIO $ runEitherT $ DL.getVersion dl
-        html $ "<h1>Hello World</h1>"<>TL.pack version
+    get "/" $ file "index.html"
+    get "/jquery.js" $ file "jquery-2.0.3.js"
+    get "/app.css" $ file "app.css"
+    get "/app.js" $ file "app.js"
 
 -- | Check that the RTC time has been set    
 checkRTCTime :: DataLogger -> EitherT String IO ()

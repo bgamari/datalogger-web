@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <link src="app.css" />
+    <script type="text/javascript" src="app.js"></script>
+    <script type="text/javascript" src="jquery.js"></script>
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+  </head>
+  <body>
+    <span class="sidebar">
+      <h1>Devices</h1>
+      <ul id="devices">
+      </ul>
+      <button type="button" class="btn btn-primary" onclick="refresh_devices();">
+        <i class="fa fa-refresh"></i>
+      </button>
+    </span>
+
+    <div>
+      <button type="button" class="btn btn-primary" onclick="start_acquire();">
+        <i class="fa fa-play"></i>
+      </button>
+    </div>
+  </body>
+</html>
