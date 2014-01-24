@@ -131,13 +131,15 @@ getSamples dl start count = do
       $ liftIO $ print errors
     return samples
   where
+    parseSample :: String -> Either String Sample
     parseSample l =
       case words l of
         [time, sid, val]  ->
-            runEitherT $ 
-            Sample <$> tryRead "Error parsing time" time
-                   <*> fmap SID (tryRead "Error parsing sensor ID" sid)
-                   <*> tryRead "Error parsing value" val
+            Sample <$> readErr "Error parsing time" time
+                   <*> fmap SID (readErr "Error parsing sensor ID" sid)
+                   <*> readErr "Error parsing value" val
+        _                 ->
+            Left "getSamples: Not enough fields"
 
 showBool :: Bool -> String
 showBool True  = "1"
