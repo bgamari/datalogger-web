@@ -74,6 +74,13 @@ routes dl = do
         liftIO $ runEitherT $ DL.set dl DL.acquiring False
         json [("device", device), ("acquiring" :: String, "false" :: TL.Text)]
 
+    get "/:device/samples" $ do
+        result <- liftIO $ runEitherT $ DL.getSamples dl 0 100
+        case result of 
+          Right samples -> json samples
+          Left error    -> do html "<h1>Error fetching samples</h1>"
+                              status status500
+
     get "/" $ do
         Right version <- liftIO $ runEitherT $ DL.getVersion dl
         html $ "<h1>Hello World</h1>"<>TL.pack version
