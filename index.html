@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <link src="app.css" />
+    <link rel="stylesheet" href="app.css" />
     <script type="text/javascript" src="app.js"></script>
     <script type="text/javascript" src="jquery.js"></script>
     <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
@@ -20,6 +20,9 @@
     <div>
       <button type="button" class="btn btn-primary" onclick="start_acquire();">
         <i class="fa fa-play"></i>
+      </button>
+      <button type="button" class="btn btn-primary inactive" onclick="stop_acquire();">
+        <i class="fa fa-stop"></i>
       </button>
     </div>
   </body>

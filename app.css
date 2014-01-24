@@ -1,3 +1,7 @@
-sidebar {
+.sidebar {
     float: left;
+}
+
+button.inactive {
+    opacity: 0.5;
 }

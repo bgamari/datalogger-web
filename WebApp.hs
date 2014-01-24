@@ -1,52 +1,140 @@
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleContexts,
+             FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances #-}
                 
-import Web.Scotty                
-import Control.Error
-import Control.Monad.IO.Class
-import qualified Data.Text.Lazy as TL
 import Data.Monoid       
-import Control.Monad (forM_, when)
-import Network.HTTP.Types.Status (status500)
-import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
-import qualified Data.Aeson as JSON
+import Data.Traversable hiding (mapM)
+import Control.Applicative ((<$>))
+import Control.Monad (forM_, when, void)
+import Control.Monad.IO.Class
+import Control.Monad.Reader
+import Control.Monad.Trans.Class
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Control.Concurrent.STM       
 
-import DataLogger (DataLogger)
+import qualified Data.Text.Lazy as TL
+import qualified Data.Map as M
+import Control.Error
+
+import Network.HTTP.Types.Status (status500, status404)
+import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
+import qualified Data.Aeson as JSON
+import Web.Scotty.Trans hiding (ScottyM, ActionM)
+
+import DataLogger (DataLogger, DeviceId)
 import qualified DataLogger as DL
 
+newtype DeviceName = DN String
+                   deriving (Show, Eq, Ord, ToJSON, FromJSON, Parsable)
+
+instance ToJSON DeviceId where
+    toJSON (DL.DevId devId) = toJSON devId
+
+data Device = Device { devName   :: DeviceName -- ^ Friendly name
+                     , devPath   :: FilePath   -- ^ Path to serial device
+                     , devLogger :: DataLogger -- ^ @DataLogger@
+                     , devId     :: DeviceId   -- ^ Unique @DeviceId@
+                     }
+                    
+type DeviceList = TVar (M.Map DeviceId Device)
+type ScottyM = ScottyT TL.Text (ReaderT DeviceList IO)
+type ActionM = ActionT TL.Text (ReaderT DeviceList IO)
+
+instance (ScottyError e, Monad m)
+       => MonadReader DeviceList (ActionT e (ReaderT DeviceList m)) where
+    ask = lift ask
+    local f = undefined
+    reader f = lift $ reader f
+
 main = do 
-    Right dl <- runEitherT $ DL.open "/dev/ttyACM0"
-    scotty 3000 $ routes dl
-   
-getSetting :: ToJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
-getSetting dl name setting =
-    get (capture $ "/:device/"<>name) $ do
-        device <- param "device" :: ActionM String
-        value <- liftIO $ runEitherT $ DL.get dl setting
+    devices <- newTVarIO M.empty
+    runReaderT refreshDevices devices
+    let run m = runReaderT m devices
+    scottyT 3000 run run routes
+
+withDeviceList :: (MonadReader DeviceList m, MonadIO m)
+               => (M.Map DeviceId Device -> m a) -> m a
+withDeviceList m = ask >>= liftIO . atomically . readTVar >>= m
+
+filterDevicesByName :: DeviceName -> ReaderT DeviceList IO [Device]
+filterDevicesByName name =
+    withDeviceList $ return . filter (\dev->devName dev == name) . M.elems
+
+lookupDeviceId :: DeviceId -> ReaderT DeviceList IO (Maybe Device)
+lookupDeviceId devId =
+    withDeviceList $ return . M.lookup devId
+
+refreshDevices :: ReaderT DeviceList IO ()
+refreshDevices = do
+    loggers <- liftIO DL.findDataLoggers
+    devList <- ask
+    dls <- liftIO $ atomically $ readTVar devList
+    let knownDevices = M.elems dls
+    
+    -- Make sure no devices have disappeared
+    forM_ (M.assocs dls) $ \(devId, dev)->do
+        when (devPath dev `notElem` loggers)
+          $ liftIO $ atomically $ modifyTVar devList $ M.delete devId
+
+    -- Add new devices
+    let newDevs = filter (`notElem` map devPath knownDevices) loggers
+    forM_ newDevs $ \devPath->runEitherT $ addDevice devPath
+
+addDevice :: MonadIO m
+          => FilePath -> EitherT String (ReaderT DeviceList m) DeviceId
+addDevice devPath = do
+    dl <- DL.open devPath
+    devList <- lift ask
+    devId <- DL.getDeviceId dl
+    liftIO $ atomically $ modifyTVar devList
+           $ M.insert devId $ Device { devPath   = devPath
+                                     , devLogger = dl
+                                     , devId     = devId
+                                     , devName   = DN "logger" -- FIXME
+                                     }
+    return devId
+
+withDevice :: (Device -> ActionM ()) -> ActionM ()
+withDevice action = do
+    deviceName <- param "device"
+    devices <- lift $ filterDevicesByName deviceName
+    case devices of
+      []    -> do status status404
+                  html "Can't find device"
+      [dev] -> action dev
+      _     -> do status status404
+                  html "Ambiguous device name"
+
+getSetting :: (ToJSON a)
+           => String -> DL.Setting a -> ScottyM ()
+getSetting settingName setting =
+    get (capture $ "/:device/"<>settingName) $ withDevice $ \dev->do
+        value <- liftIO $ runEitherT $ DL.get (devLogger dev) setting
         case value of
           Left error  -> do
             text $ TL.pack error
             status status500 
-          Right val   -> do
-            json [ ("device" :: String, toJSON device :: JSON.Value)
-                 , ("setting", toJSON name)
-                 , ("value", toJSON val)
+          Right value -> do
+            json [ ("device" :: String,  toJSON (devName dev))
+                 , ("setting",           toJSON settingName)
+                 , ("value",             toJSON value)
                  ]
 
-putSetting :: FromJSON a => DataLogger -> String -> DL.Setting a -> ScottyM ()
-putSetting dl name setting =
-    put (capture $ "/:device/"<>name) $ do
-        device <- param "device" :: ActionM String
+putSetting :: (FromJSON a, ToJSON a)
+           => String -> DL.Setting a -> ScottyM ()
+putSetting settingName setting =
+    put (capture $ "/:device/"<>settingName) $ withDevice $ \dev->do
         value <- jsonData
-        liftIO $ runEitherT $ DL.set dl setting value
-        return ()
+        liftIO $ runEitherT $ DL.set (devLogger dev) setting value
+        json [ ("device" :: String,  toJSON (devName dev))
+             , ("setting",           toJSON settingName)
+             , ("value",             toJSON value)
+             ]
     
 getPutSetting :: (ToJSON a, FromJSON a)
-              => DataLogger -> String -> DL.Setting a -> ScottyM ()
-getPutSetting dl name setting = do
-    getSetting dl name setting              
-    putSetting dl name setting
+              => String -> DL.Setting a -> ScottyM ()
+getPutSetting name setting = do
+    getSetting name setting              
+    putSetting name setting
 
 instance ToJSON DL.Sample where
     toJSON s =
@@ -55,27 +143,35 @@ instance ToJSON DL.Sample where
                   , "value"  .= DL.sampleValue s
                   ]
 
-routes :: DataLogger -> ScottyM () 
-routes dl = do
-    getPutSetting dl "acquiring" DL.acquiring
-    getPutSetting dl "sample-period" DL.samplePeriod
-    getPutSetting dl "rtc-time" DL.rtcTime
-    getPutSetting dl "acquire-on-boot" DL.acquireOnBoot
+routes :: ScottyM () 
+routes = do
+    getPutSetting "acquiring" DL.acquiring
+    getPutSetting "sample-period" DL.samplePeriod
+    getPutSetting "rtc-time" DL.rtcTime
+    getPutSetting "acquire-on-boot" DL.acquireOnBoot
 
-    put "/:device/start" $ do
-        device <- param "device"
+    get "/devices" $ do
+        withDeviceList $ json . M.keys
+    post "/devices" $ do
+        lift refreshDevices
+        withDeviceList $ json . M.keys
+        
+    put "/:device/start" $ withDevice $ \dev->do
         liftIO $ runEitherT $ do
-            checkRTCTime dl
-            DL.set dl DL.acquiring True
-        json [("device", device), ("acquiring" :: String, "true" :: TL.Text)]
+            checkRTCTime (devLogger dev)
+            DL.set (devLogger dev) DL.acquiring True
+        json [ ("device", toJSON (devName dev))
+             , ("acquiring" :: String, toJSON True)
+             ]
 
-    put "/:device/stop" $ do
-        device <- param "device"
-        liftIO $ runEitherT $ DL.set dl DL.acquiring False
-        json [("device", device), ("acquiring" :: String, "false" :: TL.Text)]
+    put "/:device/stop" $ withDevice $ \dev->do
+        liftIO $ runEitherT $ DL.set (devLogger dev) DL.acquiring False
+        json [ ("device", toJSON (devName dev))
+             , ("acquiring" :: String, toJSON False)
+             ]
 
-    get "/:device/samples" $ do
-        result <- liftIO $ runEitherT $ DL.getSamples dl 0 100
+    get "/:device/samples" $ withDevice $ \dev->do
+        result <- liftIO $ runEitherT $ DL.getSamples (devLogger dev) 0 100
         case result of 
           Right samples -> json samples
           Left error    -> do html "<h1>Error fetching samples</h1>"

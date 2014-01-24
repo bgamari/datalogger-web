@@ -5,9 +5,10 @@ module DataLogger ( findDataLoggers
                   , getVersion
                   , getSampleCount
                   , getDeviceId
+                  , DeviceId(..)
                     -- * Fetching samples
                   , Sample(..)
-                  , SensorID(..)
+                  , SensorId(..)
                   , getSamples
                     -- * Settings
                   , Setting
@@ -43,7 +44,7 @@ findDataLoggers = do
 
 newtype DataLogger = DataLogger Handle
 
-open :: FilePath -> EitherT String IO DataLogger
+open :: MonadIO m => FilePath -> EitherT String m DataLogger
 open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
     let dl = DataLogger h
@@ -51,15 +52,15 @@ open device = do
     v <- getVersion dl
     return dl
     
-close :: DataLogger -> IO ()
-close (DataLogger h) = hClose h      
+close :: MonadIO m => DataLogger -> m ()
+close (DataLogger h) = liftIO $ hClose h      
 
-writeCmd :: DataLogger -> String -> EitherT String IO ()
+writeCmd :: MonadIO m => DataLogger -> String -> EitherT String m ()
 writeCmd (DataLogger h) cmd = do
     liftIO $ hPutStr h (cmd ++ "\n")
 
 -- | Read a multi-line reply
-readReply :: DataLogger -> EitherT String IO [String]
+readReply :: MonadIO m => DataLogger -> EitherT String m [String]
 readReply (DataLogger h) = go []
   where
     go ls = do l <- strip `fmap` liftIO (hGetLine h)
@@ -68,7 +69,7 @@ readReply (DataLogger h) = go []
                  else go (l:ls)
 
 -- | Read a single-line reply 
-readSimpleReply :: DataLogger -> EitherT String IO String
+readSimpleReply :: MonadIO m => DataLogger -> EitherT String m String
 readSimpleReply dl = do
     ls <- readReply dl
     case ls of
@@ -87,42 +88,47 @@ split c xs
     a = takeWhile (/= c) xs
     b = tail $ dropWhile (/= c) xs
 
-readReplyValues :: DataLogger -> EitherT String IO (M.Map String String)
+readReplyValues :: MonadIO m => DataLogger -> EitherT String m (M.Map String String)
 readReplyValues dl = do
     M.fromList . catMaybes . map (fmap stripKeyValue . split '=') <$> readReply dl
   where
     stripKeyValue (a, b) = (strip a, strip b)
 
-readReplyValue :: DataLogger -> String -> EitherT String IO String
+readReplyValue :: MonadIO m => DataLogger -> String -> EitherT String m String
 readReplyValue dl key = do
     reply <- readReplyValues dl
-    M.lookup key reply ?? ("Key "++key++" not found")
+    case M.lookup key reply of
+      Nothing  -> left ("Key "++key++" not found")
+      Just val -> right val
 
-getVersion :: DataLogger -> EitherT String IO String
+getVersion :: MonadIO m => DataLogger -> EitherT String m String
 getVersion dl = do
     writeCmd dl "V"
     readReplyValue dl "version"
 
-getSampleCount :: DataLogger -> EitherT String IO Int
+getSampleCount :: MonadIO m => DataLogger -> EitherT String m Int
 getSampleCount dl = do
     writeCmd dl "n"
     read <$> readReplyValue dl "sample count"
-    
-getDeviceId :: DataLogger -> EitherT String IO String
+
+newtype DeviceId = DevId String    
+                 deriving (Show, Eq, Ord)
+
+getDeviceId :: MonadIO m => DataLogger -> EitherT String m DeviceId
 getDeviceId dl = do
     writeCmd dl "I"
-    readReplyValue dl "device id"
+    DevId <$> readReplyValue dl "device id"
 
-newtype SensorID = SID Int
+newtype SensorId = SID Int
                  deriving (Show, Ord, Eq)
 
 data Sample = Sample { sampleTime   :: Integer
-                     , sampleSensor :: SensorID
+                     , sampleSensor :: SensorId
                      , sampleValue  :: Float
                      }
             deriving (Show)
 
-getSamples :: DataLogger -> Int -> Int -> EitherT String IO [Sample]
+getSamples :: MonadIO m => DataLogger -> Int -> Int -> EitherT String m [Sample]
 getSamples dl start count = do
     writeCmd dl $ intercalate " " ["g", show start, show count]
     reply <- readReply dl
@@ -156,12 +162,12 @@ data Setting a = Setting { sCommand :: String
                          , sShow    :: a -> String
                          }
                
-set :: DataLogger -> Setting a -> a -> EitherT String IO ()
+set :: MonadIO m => DataLogger -> Setting a -> a -> EitherT String m ()
 set dl s value = do
     writeCmd dl (sCommand s++"="++sShow s value)
     void $ readReplyValue dl (sName s)
     
-get :: DataLogger -> Setting a -> EitherT String IO a
+get :: MonadIO m => DataLogger -> Setting a -> EitherT String m a
 get dl s = do
     writeCmd dl (sCommand s)
     reply <- readReplyValue dl (sName s)
