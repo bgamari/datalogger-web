@@ -242,3 +242,11 @@ acquireOnBoot =
             , sRead    = readBool
             , sShow    = showBool
             }
+
+deviceName :: Setting String
+deviceName =
+    Setting { sCommand = "N"
+            , sName    = "device name"
+            , sRead    = Right . id
+            , sShow    = id
+            }
