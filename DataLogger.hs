@@ -124,6 +124,35 @@ getVersion dl = valueCommand dl "V" "version"
 getSampleCount :: MonadIO m => DataLogger -> EitherT String m Int
 getSampleCount dl = read <$> valueCommand dl "n" "sample count"
 
+forceSample :: MonadIO m => DataLogger -> EitherT String m ()
+forceSample dl = void $ command dl "f"
+
+data Sensor = Sensor { sensorId   :: SensorId
+                     , sensorName :: String
+                     , sensorUnit :: String
+                     }
+            deriving (Show)
+            
+getSensors :: MonadIO m => DataLogger -> EitherT String m [Sensor]
+getSensors dl = do
+    reply <- command dl "s"
+    let (errors, sensors) = partitionEithers $ map parseSensor reply
+    return sensors
+  where
+    parseSensor l =
+      case words l of
+        [sensorId, name, unit] -> Sensor <$> SID `fmap` readErr "Error parsing sensor ID"  sensorId
+                                         <*> pure name
+                                         <*> pure unit
+        _                      -> Left "Parse error"
+
+getLastSamples :: MonadIO m => DataLogger -> EitherT String m [Sample]
+getLastSamples dl = do
+    reply <- command dl "l"
+    let (errors, samples) = partitionEithers $ map parseSample reply
+    when (not $ null errors) $ liftIO $ print errors
+    return samples
+
 newtype DeviceId = DevId String    
                  deriving (Show, Eq, Ord)
 
@@ -146,16 +175,16 @@ getSamples dl start count = do
     let (errors, samples) = partitionEithers $ map parseSample reply
     when (not $ null errors) $ liftIO $ print errors
     return samples
-  where
-    parseSample :: String -> Either String Sample
-    parseSample l =
-      case words l of
-        [time, sid, val]  ->
-            Sample <$> readErr "Error parsing time" time
-                   <*> fmap SID (readErr "Error parsing sensor ID" sid)
-                   <*> readErr "Error parsing value" val
-        _                 ->
-            Left "getSamples: Not enough fields"
+    
+parseSample :: String -> Either String Sample
+parseSample l =
+  case words l of
+    [time, sid, val]  ->
+        Sample <$> readErr "Error parsing time" time
+               <*> fmap SID (readErr "Error parsing sensor ID" sid)
+               <*> readErr "Error parsing value" val
+    _                 ->
+        Left "getSamples: Not enough fields"
 
 showBool :: Bool -> String
 showBool True  = "1"
