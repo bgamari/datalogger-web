@@ -24,7 +24,7 @@ import qualified Data.Map as M
 import Data.Maybe (catMaybes)
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Error
-import Control.Monad (void, when)
+import Control.Monad (void, when, forever)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
 import System.IO       
@@ -32,6 +32,7 @@ import Data.Char (isSpace, isDigit)
 import Data.List (isSuffixOf, intercalate)
 import System.Directory (getDirectoryContents)       
 import System.FilePath ((</>))       
+import Control.Concurrent.STM
 
 -- | Find possible data logger devices       
 findDataLoggers :: IO [FilePath]
@@ -42,36 +43,47 @@ findDataLoggers = do
   where
     isACM = isSuffixOf "ttyACM" . reverse . dropWhile isDigit . reverse
 
-newtype DataLogger = DataLogger Handle
+data DataLogger = DataLogger { handle  :: Handle
+                             , request :: TMVar (String, TMVar [String])
+                             }
 
 open :: MonadIO m => FilePath -> EitherT String m DataLogger
 open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
-    let dl = DataLogger h
+    reply <- liftIO $ atomically newEmptyTMVar
+    let dl = DataLogger h reply
     -- Make sure things are working properly
     v <- getVersion dl
     return dl
     
-close :: MonadIO m => DataLogger -> m ()
-close (DataLogger h) = liftIO $ hClose h      
-
-writeCmd :: MonadIO m => DataLogger -> String -> EitherT String m ()
-writeCmd (DataLogger h) cmd = do
+ioWorker :: DataLogger -> IO ()
+ioWorker (DataLogger h req) = forever $ do
+    (cmd,replyVar) <- atomically $ takeTMVar req
     liftIO $ hPutStr h (cmd ++ "\n")
-
--- | Read a multi-line reply
-readReply :: MonadIO m => DataLogger -> EitherT String m [String]
-readReply (DataLogger h) = go []
+    reply <- go []
+    atomically $ putTMVar replyVar reply
   where
     go ls = do l <- strip `fmap` liftIO (hGetLine h)
                if l == ""
                  then return (reverse ls)
                  else go (l:ls)
+    
+close :: MonadIO m => DataLogger -> m ()
+close (DataLogger h _) = liftIO $ hClose h
+
+type Command = String
+     
+command :: MonadIO m => DataLogger -> Command -> EitherT String m [String]
+command (DataLogger _ req) cmd = liftIO $ do
+    reply <- atomically $ do reply <- newEmptyTMVar
+                             putTMVar req (cmd, reply)
+                             return reply
+    atomically $ takeTMVar reply
 
 -- | Read a single-line reply 
-readSimpleReply :: MonadIO m => DataLogger -> EitherT String m String
-readSimpleReply dl = do
-    ls <- readReply dl
+simpleCommand :: MonadIO m => DataLogger -> Command -> EitherT String m String
+simpleCommand dl cmd = do
+    ls <- command dl cmd
     case ls of
       [l] -> return l
       []  -> left "Expected simple reply, recieved nothing"
@@ -88,36 +100,30 @@ split c xs
     a = takeWhile (/= c) xs
     b = tail $ dropWhile (/= c) xs
 
-readReplyValues :: MonadIO m => DataLogger -> EitherT String m (M.Map String String)
-readReplyValues dl = do
-    M.fromList . catMaybes . map (fmap stripKeyValue . split '=') <$> readReply dl
+valuesCommand :: MonadIO m => DataLogger -> Command -> EitherT String m (M.Map String String)
+valuesCommand dl cmd = do
+    M.fromList . catMaybes . map (fmap stripKeyValue . split '=') <$> command dl cmd
   where
     stripKeyValue (a, b) = (strip a, strip b)
 
-readReplyValue :: MonadIO m => DataLogger -> String -> EitherT String m String
-readReplyValue dl key = do
-    reply <- readReplyValues dl
+valueCommand :: MonadIO m => DataLogger -> Command -> String -> EitherT String m String
+valueCommand dl cmd key = do
+    reply <- valuesCommand dl cmd
     case M.lookup key reply of
       Nothing  -> left ("Key "++key++" not found")
       Just val -> right val
 
 getVersion :: MonadIO m => DataLogger -> EitherT String m String
-getVersion dl = do
-    writeCmd dl "V"
-    readReplyValue dl "version"
+getVersion dl = valueCommand dl "V" "version"
 
 getSampleCount :: MonadIO m => DataLogger -> EitherT String m Int
-getSampleCount dl = do
-    writeCmd dl "n"
-    read <$> readReplyValue dl "sample count"
+getSampleCount dl = read <$> valueCommand dl "n" "sample count"
 
 newtype DeviceId = DevId String    
                  deriving (Show, Eq, Ord)
 
 getDeviceId :: MonadIO m => DataLogger -> EitherT String m DeviceId
-getDeviceId dl = do
-    writeCmd dl "I"
-    DevId <$> readReplyValue dl "device id"
+getDeviceId dl = DevId <$> valueCommand dl "I" "device id"
 
 newtype SensorId = SID Int
                  deriving (Show, Ord, Eq)
@@ -130,11 +136,10 @@ data Sample = Sample { sampleTime   :: Integer
 
 getSamples :: MonadIO m => DataLogger -> Int -> Int -> EitherT String m [Sample]
 getSamples dl start count = do
-    writeCmd dl $ intercalate " " ["g", show start, show count]
-    reply <- readReply dl
+    let cmd = intercalate " " ["g", show start, show count]
+    reply <- command dl cmd
     let (errors, samples) = partitionEithers $ map parseSample reply
-    when (not $ null errors)
-      $ liftIO $ print errors
+    when (not $ null errors) $ liftIO $ print errors
     return samples
   where
     parseSample :: String -> Either String Sample
@@ -164,13 +169,12 @@ data Setting a = Setting { sCommand :: String
                
 set :: MonadIO m => DataLogger -> Setting a -> a -> EitherT String m ()
 set dl s value = do
-    writeCmd dl (sCommand s++"="++sShow s value)
-    void $ readReplyValue dl (sName s)
+    let cmd = sCommand s++"="++sShow s value
+    void $ valueCommand dl cmd (sName s)
     
 get :: MonadIO m => DataLogger -> Setting a -> EitherT String m a
 get dl s = do
-    writeCmd dl (sCommand s)
-    reply <- readReplyValue dl (sName s)
+    reply <- valueCommand dl (sCommand s) (sName s)
     hoistEither $ sRead s reply
 
 samplePeriod :: Setting Int
