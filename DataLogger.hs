@@ -102,8 +102,8 @@ split c xs
     a = takeWhile (/= c) xs
     b = emptyTail $ dropWhile (/= c) xs
     emptyTail :: [a] -> [a]
-    emptyTail []   = []
-    emptyTail x:xs = xs
+    emptyTail []     = []
+    emptyTail (x:xs) = xs
 
 valuesCommand :: MonadIO m => DataLogger -> Command -> EitherT String m (M.Map String String)
 valuesCommand dl cmd = do
