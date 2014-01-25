@@ -100,7 +100,10 @@ split c xs
   | otherwise = Just (a, b)
   where
     a = takeWhile (/= c) xs
-    b = tail $ dropWhile (/= c) xs
+    b = emptyTail $ dropWhile (/= c) xs
+    emptyTail :: [a] -> [a]
+    emptyTail []   = []
+    emptyTail x:xs = xs
 
 valuesCommand :: MonadIO m => DataLogger -> Command -> EitherT String m (M.Map String String)
 valuesCommand dl cmd = do
