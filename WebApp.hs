@@ -107,7 +107,7 @@ withDevice action = do
 getSetting :: (ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 getSetting settingName setting =
-    get (capture $ "/:device/"<>settingName) $ withDevice $ \dev->do
+    get (capture $ "/devices/:device/status/"<>settingName) $ withDevice $ \dev->do
         value <- liftIO $ runEitherT $ DL.get (devLogger dev) setting
         case value of
           Left error  -> do
@@ -122,7 +122,7 @@ getSetting settingName setting =
 putSetting :: (FromJSON a, ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 putSetting settingName setting =
-    put (capture $ "/:device/"<>settingName) $ withDevice $ \dev->do
+    put (capture $ "/devices/:device/status/"<>settingName) $ withDevice $ \dev->do
         value <- jsonData
         liftIO $ runEitherT $ DL.set (devLogger dev) setting value
         json [ ("device" :: String,  toJSON (devName dev))
@@ -156,7 +156,7 @@ routes = do
         lift refreshDevices
         withDeviceList $ json . M.keys
         
-    put "/:device/start" $ withDevice $ \dev->do
+    put "/devices/:device/start" $ withDevice $ \dev->do
         liftIO $ runEitherT $ do
             checkRTCTime (devLogger dev)
             DL.set (devLogger dev) DL.acquiring True
@@ -164,13 +164,13 @@ routes = do
              , ("acquiring" :: String, toJSON True)
              ]
 
-    put "/:device/stop" $ withDevice $ \dev->do
+    put "/devices/:device/stop" $ withDevice $ \dev->do
         liftIO $ runEitherT $ DL.set (devLogger dev) DL.acquiring False
         json [ ("device", toJSON (devName dev))
              , ("acquiring" :: String, toJSON False)
              ]
 
-    get "/:device/samples" $ withDevice $ \dev->do
+    get "/devices/:device/samples" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.getSamples (devLogger dev) 0 100
         case result of 
           Right samples -> json samples
