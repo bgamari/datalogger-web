@@ -32,6 +32,7 @@ import Data.Char (isSpace, isDigit)
 import Data.List (isSuffixOf, intercalate)
 import System.Directory (getDirectoryContents)       
 import System.FilePath ((</>))       
+import Control.Concurrent
 import Control.Concurrent.STM
 
 -- | Find possible data logger devices       
@@ -52,6 +53,7 @@ open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
     reply <- liftIO $ atomically newEmptyTMVar
     let dl = DataLogger h reply
+    liftIO $ forkIO $ ioWorker dl
     -- Make sure things are working properly
     v <- getVersion dl
     return dl
