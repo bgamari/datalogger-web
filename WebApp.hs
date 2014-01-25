@@ -149,6 +149,7 @@ routes = do
     getPutSetting "sample-period" DL.samplePeriod
     getPutSetting "rtc-time" DL.rtcTime
     getPutSetting "acquire-on-boot" DL.acquireOnBoot
+    getPutSetting "name" DL.deviceName
 
     get "/devices" $ do
         withDeviceList $ json . M.keys
