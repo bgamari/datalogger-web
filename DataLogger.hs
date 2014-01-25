@@ -18,6 +18,7 @@ module DataLogger ( findDataLoggers
                   , rtcTime
                   , acquiring
                   , acquireOnBoot
+                  , deviceName
                   ) where
 
 import qualified Data.Map as M
