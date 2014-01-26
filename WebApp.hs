@@ -1,4 +1,4 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, FlexibleContexts,
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, StandaloneDeriving, FlexibleContexts,
              FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances #-}
                 
 import Data.Monoid       
@@ -22,6 +22,8 @@ import Web.Scotty.Trans hiding (ScottyM, ActionM)
 
 import DataLogger (DataLogger, DeviceId)
 import qualified DataLogger as DL
+
+deriving instance Parsable DeviceId
 
 newtype DeviceName = DN String
                    deriving (Show, Eq, Ord, ToJSON, FromJSON, Parsable)
