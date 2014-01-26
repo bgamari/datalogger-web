@@ -85,6 +85,7 @@ addDevice :: MonadIO m
           => FilePath -> EitherT String (ReaderT DeviceList m) DeviceId
 addDevice devPath = do
     dl <- DL.open devPath
+    checkRTCTime dl
     devList <- lift ask
     devId <- DL.getDeviceId dl
     name <- DL.get dl DL.deviceName
@@ -126,7 +127,7 @@ putSetting settingName setting =
         value <- param "value"
         liftIO $ runEitherT $ DL.set (devLogger dev) setting value
         json $ toJSON value
-    
+ 
 getPutSetting :: (ToJSON a, Parsable a)
               => String -> DL.Setting a -> ScottyM ()
 getPutSetting name setting = do
@@ -154,20 +155,6 @@ routes = do
         lift refreshDevices
         withDeviceList $ json . M.keys
         
-    put "/devices/:device/start" $ withDevice $ \dev->do
-        liftIO $ runEitherT $ do
-            checkRTCTime (devLogger dev)
-            DL.set (devLogger dev) DL.acquiring True
-        json [ ("device", toJSON (devName dev))
-             , ("acquiring" :: String, toJSON True)
-             ]
-
-    put "/devices/:device/stop" $ withDevice $ \dev->do
-        liftIO $ runEitherT $ DL.set (devLogger dev) DL.acquiring False
-        json [ ("device", toJSON (devName dev))
-             , ("acquiring" :: String, toJSON False)
-             ]
-
     get "/devices/:device/samples" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.getSamples (devLogger dev) 0 100
         case result of 
