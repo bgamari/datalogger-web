@@ -62,7 +62,7 @@ filterDevicesByName name =
 lookupDeviceId :: DeviceId -> ReaderT DeviceList IO (Maybe Device)
 lookupDeviceId devId =
     withDeviceList $ return . M.lookup devId
-
+    
 refreshDevices :: ReaderT DeviceList IO ()
 refreshDevices = do
     loggers <- liftIO DL.findDataLoggers
@@ -95,14 +95,14 @@ addDevice devPath = do
 
 withDevice :: (Device -> ActionM ()) -> ActionM ()
 withDevice action = do
-    deviceName <- param "device"
-    devices <- lift $ filterDevicesByName deviceName
+    devId <- param "device"
+    devices <- lift $ lookupDeviceId devId
     case devices of
-      []    -> do status status404
-                  html "Can't find device"
-      [dev] -> action dev
-      _     -> do status status404
-                  html "Ambiguous device name"
+      Nothing  -> do status status404
+                     html "Can't find device"
+      Just dev -> action dev
+      _        -> do status status404
+                     html "Ambiguous device name"
 
 getSetting :: (ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
