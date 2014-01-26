@@ -87,11 +87,12 @@ addDevice devPath = do
     dl <- DL.open devPath
     devList <- lift ask
     devId <- DL.getDeviceId dl
+    name <- DL.get dl DL.deviceName
     liftIO $ atomically $ modifyTVar devList
            $ M.insert devId $ Device { devPath   = devPath
                                      , devLogger = dl
                                      , devId     = devId
-                                     , devName   = DN "logger" -- FIXME
+                                     , devName   = DN name
                                      }
     return devId
 
