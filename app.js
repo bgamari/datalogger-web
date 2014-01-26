@@ -1,14 +1,9 @@
-var current_device = null;
-
-
-
 function sensor_name_change(uuid, name){
     $.ajax("/devices/"+uuid+"/name", {
         type: "PUT",
         data: name
     });
 }
-
 
 function start_stop_acquire(uuid, is_active) {
     $.ajax("/devices/"+uuid+"/acquiring", { type: "POST" , data: {value: is_active}});
@@ -27,7 +22,6 @@ function get_status(uuid){
 function eject_device(device) {
     $("#deviceIdx-"+deviceIdx).remove();
 }
-
 
 function refresh_devices() {
     $.ajax("/devices", {
@@ -69,14 +63,6 @@ function refresh_devices() {
 
 
 function add_sensor(uuid, sensor_name) {
-
-    var newRow = $('<tr><td id="sensor_name_"' + uuid + '>       \
-    </td> \
-        <td><button>X</button></td> \
-        <td>2014 <button id="sensor' + uuid + '_deleteall">Del</button></td> \
-        <td>2 min</td> \
-        <td>Ok <button id="sensor' + uuid + '_confupl">Configure</button></td></tr> \
-    ');
     var row = $("<tr></tr>", {id: uuid});
     row.append($("<td class='sensor-name-cell'></td>"));
     row.append($("<td class='sensor-name-edit-cell'></td>"));
@@ -87,14 +73,16 @@ function add_sensor(uuid, sensor_name) {
     row.append($("<td>Ok <button class='configure-btn'>Configure</button></td>"));
 
     $("#sensors").find("tbody").append(row);
-    add_sensor_name(uuid, sensor_name, function(name) { sensor_name_change(uuid, name);});
+    add_sensor_name(uuid, sensor_name, function(name) {
+        sensor_name_change(uuid, name);
+    });
 
-    add_activate_btn(uuid, false, function(is_active) {start_stop_acquire(uuid, is_active);} );
+    add_activate_btn(uuid, false, function(is_active) {
+        start_stop_acquire(uuid, is_active);
+    });
+
     get_status(uuid);
 }
-
-
-
 
 function add_new_sensor() {
     var numRows = $("#sensors").find("tr").length;
