@@ -27,7 +27,6 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
 
 function add_sensor_name(uuid, name, sensor_change_evt) {
     var $parent = $("#" + uuid + ' .sensor-name-cell');
-    var $parent2 = $("#" + uuid + ' .sensor-name-edit-cell');
 
     $('<span/>')
         .addClass("sensor-name")
@@ -43,7 +42,7 @@ function add_sensor_name(uuid, name, sensor_change_evt) {
                 var $parent = $("#" + uuid + ' .sensor-name-cell');
                 edit_text($parent, $text, $editBtn, sensor_change_evt)
             });
-    $btn.appendTo($parent2);
+    $btn.appendTo($parent);
 }
 
 
