@@ -1,8 +1,6 @@
-
 function edit_text($parent, $text, $editBtn, text_change_fn) {
     var $input = $('<input>');
     $input.val($text.text());
-
 
     function submit_sensor_name() {
         var new_name = $input.val();
@@ -25,7 +23,6 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
     $text.hide();
     $editBtn.hide();
     $input.appendTo($parent);
-
 }
 
 function add_sensor_name(uuid, name, sensor_change_evt) {
@@ -66,12 +63,10 @@ function is_status_active($btn) {
 function set_status_active_uuid(uuid, is_active){
     var $btn = $("#" + uuid + " .activate-btn");
     set_status_active($btn, is_active);
-
 }
 
 function add_activate_btn(uuid, is_active, change_activation_fn) {
     var $parent = $("#" + uuid + ' .sensor-activate-cell');
-
 
     var $btn =
         $('<button/>')
