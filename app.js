@@ -60,17 +60,14 @@ function refresh_devices() {
     }});
 }
 
-
-
 function add_sensor(uuid, sensor_name) {
     var row = $("<tr></tr>", {id: uuid});
     row.append($("<td class='sensor-name-cell'></td>"));
     row.append($("<td class='sensor-name-edit-cell'></td>"));
-
     row.append($("<td class='sensor-activate-cell'></td>"));
     row.append($("<td>20134 <button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
     row.append($("<td>2 min</td>"));
-    row.append($("<td>Ok <button class='configure-btn'>Configure</button></td>"));
+    row.append($("<td>Ok <button class='btn btn-primary btn-sm configure-btn'>Configure</button></td>"));
 
     $("#sensors").find("tbody").append(row);
     add_sensor_name(uuid, sensor_name, function(name) {

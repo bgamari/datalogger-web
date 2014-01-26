@@ -35,9 +35,8 @@ function add_sensor_name(uuid, name, sensor_change_evt) {
         .appendTo($parent);
 
     var $btn =
-        $('<button/>')
-            .addClass("edit-btn")
-            .text("Edit")
+        $("<button><i class='fa fa-pencil'></i></button>")
+            .addClass("edit-btn btn-s")
             .click(function () {
                 var $editBtn = $('#' + uuid + " .edit-btn");
                 var $text = $('#' + uuid + " .sensor-name");
@@ -71,6 +70,7 @@ function add_activate_btn(uuid, is_active, change_activation_fn) {
     var $btn =
         $('<button/>')
             .addClass("activate-btn")
+            .addClass("btn btn-sm btn-primary")
             .text("Activate")
             .click(function () {
                 var active = is_status_active($btn);

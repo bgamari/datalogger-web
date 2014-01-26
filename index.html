@@ -1,66 +1,45 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="app.css"/>
-    <script type="text/javascript" src="ui.js"></script>
-    <script type="text/javascript" src="app.js"></script>
-    <script type="text/javascript" src="jquery.js"></script>
-    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
-    <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
+  <link rel="stylesheet" href="app.css"/>
+  <script type="text/javascript" src="ui.js"></script>
+  <script type="text/javascript" src="app.js"></script>
+  <script type="text/javascript" src="jquery.js"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+  <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.3/css/font-awesome.css" rel="stylesheet">
 </head>
 <body>
-<H1>Data Logger Setup Experiment</H1>
+  <h1>Data Logger Setup Experiment</h1>
 
-<p>
-
-<p><label for="experimentname">Experiment Name: </label>
+  <div>
+    <label for="experimentname">Experiment Name: </label>
     <input id="experimentname" maxlength="80" contenteditable="true"
-           value="Experiment 1"></p>
+           value="Experiment 1">
+  </div>
 
-<p><label for="sampleinterval">Sample Interval [Minutes]: </label>
+  <div>
+    <label for="sampleinterval">Sample Interval [Minutes]: </label>
     <input id="sampleinterval" maxlength="4"
-           contenteditable="true" value="30"></p>
+           contenteditable="true" value="30">
+  </div>
 
-<table id="sensors">
+  <table id="sensors">
     <tr>
-        <th>Sensor</th>
-        <th></th>
-        <th>Active</th>
-        <th>Current Samples</th>
-        <th>Last Download</th>
-        <th>Config upload</th>
+      <th>Name</th>
+      <th></th>
+      <th>Active</th>
+      <th>Current Samples</th>
+      <th>Last Download</th>
+      <th>Config upload</th>
     </tr>
+  </table>
+  <!--<button onclick="add_new_sensor();">Add New Sensor</button>-->
 
+  <h2>New Devices</h2>
+  <ul id="devices"></ul>
+  <button id="start" type="button" class="btn btn-primary" onclick="refresh_devices();">
+    <i class="fa fa-refresh"></i>
+  </button>
 
-</table>
-<!--<button onclick="add_new_sensor();">Add New Sensor</button>-->
-
-<h2>New Devices</h2>
-<ul id="devices">
-</ul>
-<button id="start" type="button" class="btn btn-primary" onclick="refresh_devices();">
-<i class="fa fa-refresh"></i>
-</button>
-
-
-
-
-    <!--<span class="sidebar">-->
-      <!--<h1>Devices</h1>-->
-      <!--<ul id="devices">-->
-      <!--</ul>-->
-      <!--<button id="start" type="button" class="btn btn-primary" onclick="refresh_devices();">-->
-          <!--<i class="fa fa-refresh"></i>-->
-      <!--</button>-->
-    <!--</span>-->
-
-<!--<div>-->
-    <!--<button type="button" class="btn btn-primary" onclick="start_acquire();">-->
-        <!--<i class="fa fa-play"></i>-->
-    <!--</button>-->
-    <!--<button type="button" class="btn btn-primary inactive" onclick="stop_acquire();">-->
-        <!--<i class="fa fa-stop"></i>-->
-    <!--</button>-->
-<!--</div>-->
 </body>
 </html>
