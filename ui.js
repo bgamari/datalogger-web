@@ -51,3 +51,38 @@ function add_sensor_name(sensor_id, name, sensor_change_evt) {
 }
 
 
+function set_status_active($btn, is_active){
+    if(is_active){
+        $btn.text("Deactivate");
+    } else {
+        $btn.text("Activate");
+    }
+}
+
+function is_status_active($btn) {
+    return $btn.text() == "Deactivate";
+}
+
+function set_status_active_uuid(uuid, is_active){
+    var $btn = $("#" + sensor_id + " .activate-btn");
+    set_status_active($btn, is_active);
+
+}
+
+function add_activate_btn(uuid, is_active, change_activation_fn) {
+    var $parent = $("#" + sensor_id + ' .sensor-activate-cell');
+
+
+    var $btn =
+        $('<button/>')
+            .addClass("activate-btn")
+            .click(function () {
+                var active = is_status_active($btn);
+                change_activation_fn(active);
+                set_status_active($btn, active);
+            });
+    set_status_active($btn, is_active);
+    $btn.appendTo($parent);
+}
+
+
