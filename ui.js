@@ -28,9 +28,9 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
 
 }
 
-function add_sensor_name(sensor_id, name, sensor_change_evt) {
-    var $parent = $("#" + sensor_id + ' .sensor-name-cell');
-    var $parent2 = $("#" + sensor_id + ' .sensor-name-edit-cell');
+function add_sensor_name(uuid, name, sensor_change_evt) {
+    var $parent = $("#" + uuid + ' .sensor-name-cell');
+    var $parent2 = $("#" + uuid + ' .sensor-name-edit-cell');
 
     $('<span/>')
         .addClass("sensor-name")
@@ -42,9 +42,9 @@ function add_sensor_name(sensor_id, name, sensor_change_evt) {
             .addClass("edit-btn")
             .text("Edit")
             .click(function () {
-                var $editBtn = $('#' + sensor_id + " .edit-btn");
-                var $text = $('#' + sensor_id + " .sensor-name");
-                var $parent = $("#" + sensor_id + ' .sensor-name-cell');
+                var $editBtn = $('#' + uuid + " .edit-btn");
+                var $text = $('#' + uuid + " .sensor-name");
+                var $parent = $("#" + uuid + ' .sensor-name-cell');
                 edit_text($parent, $text, $editBtn, sensor_change_evt)
             });
     $btn.appendTo($parent2);
@@ -64,22 +64,23 @@ function is_status_active($btn) {
 }
 
 function set_status_active_uuid(uuid, is_active){
-    var $btn = $("#" + sensor_id + " .activate-btn");
+    var $btn = $("#" + uuid + " .activate-btn");
     set_status_active($btn, is_active);
 
 }
 
 function add_activate_btn(uuid, is_active, change_activation_fn) {
-    var $parent = $("#" + sensor_id + ' .sensor-activate-cell');
+    var $parent = $("#" + uuid + ' .sensor-activate-cell');
 
 
     var $btn =
         $('<button/>')
             .addClass("activate-btn")
+            .text("Activate")
             .click(function () {
                 var active = is_status_active($btn);
                 change_activation_fn(active);
-                set_status_active($btn, active);
+                set_status_active($btn, !active);
             });
     set_status_active($btn, is_active);
     $btn.appendTo($parent);

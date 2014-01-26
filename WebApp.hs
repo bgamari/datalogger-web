@@ -119,15 +119,17 @@ getSetting settingName setting =
           Right value -> do
             json $ toJSON value
 
-putSetting :: (FromJSON a, ToJSON a)
+putSetting :: (Parsable a, ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 putSetting settingName setting =
-    put (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
-        value <- jsonData
-        liftIO $ runEitherT $ DL.set (devLogger dev) setting value
-        json $ toJSON value
+    post (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
+        --value <- param "value"
+        params >>= liftIO . print
+        --liftIO $ runEitherT $ DL.set (devLogger dev) setting value
+        --json $ toJSON value
+        json $ toJSON $ devId dev
     
-getPutSetting :: (ToJSON a, FromJSON a)
+getPutSetting :: (ToJSON a, Parsable a)
               => String -> DL.Setting a -> ScottyM ()
 getPutSetting name setting = do
     getSetting name setting              

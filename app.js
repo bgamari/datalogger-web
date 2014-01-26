@@ -1,15 +1,24 @@
 var current_device = null;
 
 
+
+function sensor_name_change(uuid, name){
+    $.ajax("/devices/"+uuid+"/name", {
+        type: "PUT",
+        data: name
+    });
+}
+
+
 function start_stop_acquire(uuid, is_active) {
-    $.ajax("/dev/start", { type: "PUT" , data:"start="+is_active});
+    $.ajax("/devices/"+uuid+"/acquiring", { type: "POST" , data: {value: is_active}});
 }
 
 function get_status(uuid){
-    $.ajax("/dev/"+uuid+"/status", {
+    $.ajax("/devices/"+uuid+"/acquiring", {
         type: "GET",
         success: function(data, status, xhr) {
-            var is_active = data['acquiring'];
+            var is_active = data;
             set_status_active_uuid(uuid, is_active);
         }
     } );
@@ -57,13 +66,6 @@ function refresh_devices() {
     }});
 }
 
-function sensor_name_change(uuid, name){
-    $.ajax("/devices/"+uuid+"/name", {
-        type: "POST",
-        data: "submit="+name
-    });
-}
-
 
 
 function add_sensor(uuid, sensor_name) {
@@ -79,7 +81,7 @@ function add_sensor(uuid, sensor_name) {
     row.append($("<td class='sensor-name-cell'></td>"));
     row.append($("<td class='sensor-name-edit-cell'></td>"));
 
-    row.append($("<td><button>X</button></td>"));
+    row.append($("<td class='sensor-activate-cell'></td>"));
     row.append($("<td>20134 <button class='delete-btn'>Del</button></td>"));
     row.append($("<td>2 min</td>"));
     row.append($("<td>Ok <button class='configure-btn'>Configure</button></td>"));
