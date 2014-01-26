@@ -68,7 +68,7 @@ function add_sensor(uuid, sensor_name) {
     row.append($("<td class='sensor-name-edit-cell'></td>"));
 
     row.append($("<td class='sensor-activate-cell'></td>"));
-    row.append($("<td>20134 <button class='delete-btn'>Del</button></td>"));
+    row.append($("<td>20134 <button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
     row.append($("<td>2 min</td>"));
     row.append($("<td>Ok <button class='configure-btn'>Configure</button></td>"));
 
