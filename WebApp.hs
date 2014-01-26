@@ -98,8 +98,10 @@ addDevice devPath = do
 
 withDevice :: (Device -> ActionM ()) -> ActionM ()
 withDevice action = do
-    devId <- param "device"
-    devices <- lift $ lookupDeviceId devId
+    dId <- param "device"
+    devices <- lift $ lookupDeviceId dId
+    liftIO $ print (dId, fmap devId devices)
+    withDeviceList $ liftIO . print . map devId . M.elems
     case devices of
       Nothing  -> do status status404
                      html "Can't find device"
@@ -108,7 +110,7 @@ withDevice action = do
 getSetting :: (ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 getSetting settingName setting =
-    get (capture $ "/devices/:device/status/"<>settingName) $ withDevice $ \dev->do
+    get (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
         value <- liftIO $ runEitherT $ DL.get (devLogger dev) setting
         case value of
           Left error  -> do
@@ -120,7 +122,7 @@ getSetting settingName setting =
 putSetting :: (FromJSON a, ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 putSetting settingName setting =
-    put (capture $ "/devices/:device/status/"<>settingName) $ withDevice $ \dev->do
+    put (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
         value <- jsonData
         liftIO $ runEitherT $ DL.set (devLogger dev) setting value
         json $ toJSON value
