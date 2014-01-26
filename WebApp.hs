@@ -180,6 +180,7 @@ routes = do
 
     get "/" $ file "index.html"
     get "/jquery.js" $ file "jquery-2.0.3.js"
+    get "/ui.js" $ file "ui.js"
     get "/app.css" $ file "app.css"
     get "/app.js" $ file "app.js"
 

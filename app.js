@@ -16,11 +16,11 @@ function start_acquire() {
 }
 
 function eject_device(device) {
-    $("#device-"+device).remove();
+    $("#deviceIdx-"+deviceIdx).remove();
 }
 
 function select_device(device) {
-    current_device = device;
+    current_device = deviceIdx;
     // setup UI elements
 }
 
@@ -30,12 +30,28 @@ function refresh_devices() {
 
         success: function(data, status, xhr) {
             $("#devices").empty();
-            for (device in data) {
-                btn = $("<button type='button' class='btn btn-xs btn-warning'><i class='fa fa-eject'></i></button>")
-                btn.on('click', eject_device(device));
-                item = $("<li>"+device+"</li>");
-                item.append(btn);
-                $("#devices").append(item);
+            for (deviceIdx in data) {
+                $btn = $("<button type='button' class='btn btn-xs btn-warning'><i class='fa fa-eject'></i></button>")
+                $btn.on('click', eject_device(deviceIdx));
+
+
+                $.ajax("/devices/"+data[deviceIdx]+"/name", {
+                    type: "GET",
+                    success: function(name, status2, xhr2) {
+
+
+                        alert(deviceIdx.toString()+" "+name.toString());
+                        $addbtn = $("<button></button>")
+                            .click(function() { add_sensor(data[deviceIdx].toString())})
+
+                        $item = $("<li>"+deviceIdx+"</li>");
+                        $item.append($btn);
+                        $item.append($addbtn);
+                        $("#devices").append($item);
+
+                    }
+                })
+
             }
     }});
 }
