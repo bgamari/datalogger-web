@@ -114,10 +114,7 @@ getSetting settingName setting =
             text $ TL.pack error
             status status500 
           Right value -> do
-            json [ ("device" :: String,  toJSON (devName dev))
-                 , ("setting",           toJSON settingName)
-                 , ("value",             toJSON value)
-                 ]
+            json $ toJSON value
 
 putSetting :: (FromJSON a, ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
@@ -125,10 +122,7 @@ putSetting settingName setting =
     put (capture $ "/devices/:device/status/"<>settingName) $ withDevice $ \dev->do
         value <- jsonData
         liftIO $ runEitherT $ DL.set (devLogger dev) setting value
-        json [ ("device" :: String,  toJSON (devName dev))
-             , ("setting",           toJSON settingName)
-             , ("value",             toJSON value)
-             ]
+        json $ toJSON value
     
 getPutSetting :: (ToJSON a, FromJSON a)
               => String -> DL.Setting a -> ScottyM ()
