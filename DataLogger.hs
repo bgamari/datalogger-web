@@ -19,6 +19,8 @@ module DataLogger ( findDataLoggers
                   , acquiring
                   , acquireOnBoot
                   , deviceName
+                    -- * Non-volatile configuration
+                  , saveNVConfig
                   ) where
 
 import qualified Data.Map as M
@@ -196,6 +198,9 @@ readBool "1" = Right True
 readBool "0" = Right False
 readBool  a  = Left ("Unexpected boolean value: "++a)
     
+saveNVConfig :: MonadIO m => DataLogger -> EitherT String m ()
+saveNVConfig dl = void $ command dl "S"          
+
 data Setting a = Setting { sCommand :: String
                          , sName    :: String
                          , sRead    :: String -> Either String a
