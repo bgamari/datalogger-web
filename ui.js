@@ -15,7 +15,10 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
     $input.keypress(function (evt) {
         evt = (evt) ? evt : (window.event) ? event : null;
         if (evt) {
-            var charCode = (evt.charCode) ? evt.charCode : ((evt.keyCode) ? evt.keyCode : ((evt.which) ? evt.which : 0));
+            var charCode =
+                evt.charCode ? evt.charCode :
+                (evt.keyCode ? evt.keyCode :
+                 (evt.which ? evt.which : 0));
             if (charCode == 13)
                 $input.focusout();
         }
