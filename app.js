@@ -16,7 +16,13 @@ function get_status(uuid){
             var is_active = data;
             set_status_active_uuid(uuid, is_active);
         }
-    } );
+    });
+    $.ajax("/devices/"+uuid+"/samples_count", {
+        type: "GET",
+        success: function(data, status, xhr) {
+            $("#" + uuid + ' .sample-count').text = data;
+        }
+    });
 }
 
 function eject_device(device) {
@@ -64,7 +70,7 @@ function add_sensor(uuid, sensor_name) {
     var row = $("<tr></tr>", {id: uuid});
     row.append($("<td class='sensor-name-cell'></td>"));
     row.append($("<td class='sensor-activate-cell'></td>"));
-    row.append($("<td>20134 <button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
+    row.append($("<td><span class='sample-count'>unknown</span><button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
     row.append($("<td>2 min</td>"));
     row.append($("<td>Ok <button class='btn btn-primary btn-sm configure-btn'>Configure</button></td>"));
 

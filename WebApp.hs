@@ -155,6 +155,13 @@ routes = do
         lift refreshDevices
         withDeviceList $ json . M.keys
         
+    get "/devices/:device/sample_count" $ withDevice $ \dev->do
+        result <- liftIO $ runEitherT $ DL.getSampleCount (devLogger dev)
+        case result of
+          Right count  -> json count
+          Left error   -> do html "<h1>Error fetching sample count</h1>"
+                             status status500
+                             
     get "/devices/:device/samples" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.getSamples (devLogger dev) 0 100
         case result of 
