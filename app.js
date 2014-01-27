@@ -17,10 +17,10 @@ function get_status(uuid){
             set_status_active_uuid(uuid, is_active);
         }
     });
-    $.ajax("/devices/"+uuid+"/samples_count", {
+    $.ajax("/devices/"+uuid+"/sample_count", {
         type: "GET",
         success: function(data, status, xhr) {
-            $("#" + uuid + ' .sample-count').text = data;
+            $("#" + uuid + ' .sample-count').text(data);
         }
     });
 }
