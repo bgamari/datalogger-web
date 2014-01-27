@@ -67,7 +67,10 @@ function refresh_devices() {
 }
 
 function add_sensor(uuid, sensor_name) {
-    var row = $("<tr></tr>", {id: uuid});
+    var row = $("<tr></tr>", {
+        id: uuid,
+        class: 'sensor',
+    });
     row.append($("<td class='sensor-name-cell'></td>"));
     row.append($("<td class='sensor-activate-cell'></td>"));
     row.append($("<td><span class='sample-count'>unknown</span><button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
@@ -90,4 +93,3 @@ function add_new_sensor() {
     var numRows = $("#sensors").find("tr").length;
     add_sensor(numRows + 1);
 }
-
