@@ -77,3 +77,39 @@ function add_activate_btn(uuid, is_active, change_activation_fn) {
     set_status_active(uuid, is_active);
     $btn.appendTo($parent);
 }
+
+function add_sensor_row(uuid, sensor_name) {
+    var row = $("<tr></tr>", {
+        id: uuid,
+        class: 'sensor',
+    });
+    row.append($("<td class='sensor-name-cell' />"));
+    row.append($("<td class='sensor-activate-cell' />"));
+    row.append($("<td/>")
+               .append($("<span class='sample-count'>unknown</span>"))
+               .append($("<button class='btn btn-sm btn-primary download-btn'/>")
+                       .append($("<i class='fa fa-download'></i>"))
+                       .click(function() {
+                           location.href = "/devices/" + uuid + "/samples/csv";
+                       })
+                      )
+
+               .append($("<button class='btn btn-sm btn-danger delete-btn'/>")
+                       .append($("<i class='fa fa-trash-o'></i>"))
+                       )
+              );
+    row.append($("<td>2 min</td>"));
+    row.append($("<td/>")
+               .append($("Ok"))
+               .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
+               );
+
+    $("#sensors tbody").append(row);
+    add_sensor_name(uuid, sensor_name, function(name) {
+        sensor_name_change(uuid, name);
+    });
+
+    add_activate_btn(uuid, false, function(is_active) {
+        start_stop_acquire(uuid, is_active);
+    });
+}
