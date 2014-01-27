@@ -6,7 +6,7 @@ button.inactive {
     opacity: 0.5;
 }
 
-table#sensors td {
-    padding: 0em 2em;
+table#sensors th {
+    padding: 0em 3em;
 }
     
