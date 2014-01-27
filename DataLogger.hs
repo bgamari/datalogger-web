@@ -1,3 +1,5 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+
 module DataLogger ( findDataLoggers
                   , DataLogger
                   , open
@@ -37,6 +39,7 @@ import System.Directory (getDirectoryContents)
 import System.FilePath ((</>))       
 import Control.Concurrent
 import Control.Concurrent.STM
+import qualified Data.Csv as Csv
 
 -- | Find possible data logger devices       
 findDataLoggers :: IO [FilePath]
@@ -163,13 +166,19 @@ getDeviceId :: MonadIO m => DataLogger -> EitherT String m DeviceId
 getDeviceId dl = DevId <$> valueCommand dl "I" "device id"
 
 newtype SensorId = SID Int
-                 deriving (Show, Ord, Eq)
+                 deriving (Show, Ord, Eq, Csv.ToField)
 
 data Sample = Sample { sampleTime   :: Integer
                      , sampleSensor :: SensorId
                      , sampleValue  :: Float
                      }
             deriving (Show)
+
+instance Csv.ToRecord Sample where
+    toRecord s = Csv.record [ Csv.toField (sampleTime s)
+                            , Csv.toField (sampleSensor s)
+                            , Csv.toField (sampleValue s)
+                            ]
 
 getSamples :: MonadIO m => DataLogger -> Int -> Int -> EitherT String m [Sample]
 getSamples dl start count = do

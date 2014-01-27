@@ -15,6 +15,7 @@ import Control.Concurrent.STM
 import qualified Data.Text.Lazy as TL
 import qualified Data.Map as M
 import qualified Data.Vector as V
+import qualified Data.Csv as Csv
 import Control.Error
 
 import Network.HTTP.Types.Status (status500, status404)
@@ -154,6 +155,11 @@ fetchSamples dev = do
         liftIO $ atomically $ writeTVar (devSamples dev) (Just samples)
         return samples
 
+csv :: Csv.ToRecord a => [a] -> ActionM ()
+csv xs = do
+    setHeader "Content-Type" "text/plain"
+    raw $ Csv.encode xs
+
 routes :: ScottyM () 
 routes = do
     getPutSetting "acquiring" DL.acquiring
@@ -178,7 +184,7 @@ routes = do
     get "/devices/:device/samples/csv" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ fetchSamples dev
         case result of 
-          Right samples -> json samples
+          Right samples -> csv (V.toList samples)
           Left error    -> do html "<h1>Error fetching samples</h1>"
                               status status500
 
