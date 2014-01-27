@@ -85,6 +85,22 @@ function add_sensor_row(uuid, sensor_name) {
     row.append($("<td class='sensor-activate-cell' />"));
     row.append($("<td/>")
                .append($("<span class='sample-count'>unknown</span>"))
+               .append($("<button class='btn btn-sm btn-primary plot-btn' />")
+                       .append($("<i class='fa fa-bar-chart-o'></i>"))
+                       .click(function() {
+                           $.ajax('/devices/'+uuid+'/samples/json',
+                                  { success: function(data, error, xhr) {
+                                      filtered = [];
+                                      for (i in data) {
+                                          if (data[i].sensor == 1)
+                                              filtered.push(data[i]);
+                                      }
+                                      curve_set_data(filtered);
+                                  }
+                                  }
+                                 )
+                           })
+                       )
                .append($("<button class='btn btn-sm btn-primary download-btn'/>")
                        .append($("<i class='fa fa-download'></i>"))
                        .click(function() {

@@ -200,6 +200,8 @@ routes = do
     get "/ui.js" $ file "ui.js"
     get "/app.css" $ file "app.css"
     get "/app.js" $ file "app.js"
+    get "/chart.css" $ file "chart.css"
+    get "/chart.js" $ file "chart.js"
 
 -- | Check that the RTC time has been set    
 checkRTCTime :: DataLogger -> EitherT String IO ()
