@@ -1,5 +1,6 @@
-{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, StandaloneDeriving, FlexibleContexts,
-             FlexibleInstances, MultiParamTypeClasses, TypeSynonymInstances #-}
+{-# LANGUAGE OverloadedStrings, GeneralizedNewtypeDeriving, StandaloneDeriving,
+             FlexibleContexts, FlexibleInstances, MultiParamTypeClasses,
+             TypeSynonymInstances #-}
                 
 import Data.Monoid       
 import Data.Traversable hiding (mapM)
@@ -13,6 +14,7 @@ import Control.Concurrent.STM
 
 import qualified Data.Text.Lazy as TL
 import qualified Data.Map as M
+import qualified Data.Vector as V
 import Control.Error
 
 import Network.HTTP.Types.Status (status500, status404)
@@ -20,7 +22,7 @@ import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
 import qualified Data.Aeson as JSON
 import Web.Scotty.Trans hiding (ScottyM, ActionM)
 
-import DataLogger (DataLogger, DeviceId)
+import DataLogger (DataLogger, DeviceId, Sample)
 import qualified DataLogger as DL
 
 deriving instance Parsable DeviceId
@@ -35,6 +37,7 @@ data Device = Device { devName   :: DeviceName -- ^ Friendly name
                      , devPath   :: FilePath   -- ^ Path to serial device
                      , devLogger :: DataLogger -- ^ @DataLogger@
                      , devId     :: DeviceId   -- ^ Unique @DeviceId@
+                     , devSamples :: TVar (Maybe (V.Vector Sample))  -- ^ Cached samples
                      }
                     
 type DeviceList = TVar (M.Map DeviceId Device)
@@ -89,11 +92,13 @@ addDevice devPath = do
     devList <- lift ask
     devId <- DL.getDeviceId dl
     name <- DL.get dl DL.deviceName
+    samples <- liftIO $ newTVarIO Nothing
     liftIO $ atomically $ modifyTVar devList
-           $ M.insert devId $ Device { devPath   = devPath
-                                     , devLogger = dl
-                                     , devId     = devId
-                                     , devName   = DN name
+           $ M.insert devId $ Device { devPath    = devPath
+                                     , devLogger  = dl
+                                     , devId      = devId
+                                     , devName    = DN name
+                                     , devSamples = samples
                                      }
     return devId
 
@@ -139,6 +144,16 @@ instance ToJSON DL.Sample where
                   , "value"  .= DL.sampleValue s
                   ]
 
+fetchSamples :: Device -> EitherT String IO (V.Vector Sample)
+fetchSamples dev = do
+    cache <- liftIO $ atomically $ readTVar (devSamples dev)
+    case cache of
+      Just samples -> return samples
+      Nothing -> do
+        samples <- V.fromList <$> DL.getSamples (devLogger dev) 0 100
+        liftIO $ atomically $ writeTVar (devSamples dev) (Just samples)
+        return samples
+
 routes :: ScottyM () 
 routes = do
     getPutSetting "acquiring" DL.acquiring
@@ -160,8 +175,15 @@ routes = do
           Left error   -> do html "<h1>Error fetching sample count</h1>"
                              status status500
                              
-    get "/devices/:device/samples" $ withDevice $ \dev->do
-        result <- liftIO $ runEitherT $ DL.getSamples (devLogger dev) 0 100
+    get "/devices/:device/samples/csv" $ withDevice $ \dev->do
+        result <- liftIO $ runEitherT $ fetchSamples dev
+        case result of 
+          Right samples -> json samples
+          Left error    -> do html "<h1>Error fetching samples</h1>"
+                              status status500
+
+    get "/devices/:device/samples/json" $ withDevice $ \dev->do
+        result <- liftIO $ runEitherT $ fetchSamples dev
         case result of 
           Right samples -> json samples
           Left error    -> do html "<h1>Error fetching samples</h1>"
