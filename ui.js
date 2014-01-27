@@ -49,11 +49,12 @@ function add_sensor_name(uuid, name, sensor_change_evt) {
 }
 
 
-function set_status_active($btn, is_active){
-    if(is_active){
-        $btn.text("Deactivate");
+function set_status_active(uuid, is_active) {
+    var $icon = $("#" + uuid + " .activate-btn i");
+    if (is_active) {
+        $icon.attr('class', 'fa fa-check-circle-o');
     } else {
-        $btn.text("Activate");
+        $icon.attr('class', 'fa fa-circle-o');
     }
 }
 
@@ -61,26 +62,18 @@ function is_status_active($btn) {
     return $btn.text() == "Deactivate";
 }
 
-function set_status_active_uuid(uuid, is_active){
-    var $btn = $("#" + uuid + " .activate-btn");
-    set_status_active($btn, is_active);
-}
-
 function add_activate_btn(uuid, is_active, change_activation_fn) {
     var $parent = $("#" + uuid + ' .sensor-activate-cell');
-
     var $btn =
         $('<button/>')
             .addClass("activate-btn")
             .addClass("btn btn-sm btn-primary")
-            .text("Activate")
+            .append($('<i/>'))
             .click(function () {
                 var active = is_status_active($btn);
                 change_activation_fn(active);
-                set_status_active($btn, !active);
+                set_status_active(uuid, !active);
             });
-    set_status_active($btn, is_active);
+    set_status_active(uuid, is_active);
     $btn.appendTo($parent);
 }
-
-

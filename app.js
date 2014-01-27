@@ -14,7 +14,7 @@ function get_status(uuid){
         type: "GET",
         success: function(data, status, xhr) {
             var is_active = data;
-            set_status_active_uuid(uuid, is_active);
+            set_status_active(uuid, is_active);
         }
     });
     $.ajax("/devices/"+uuid+"/sample_count", {
@@ -61,7 +61,6 @@ function refresh_devices() {
                         }
                     })
                 }
-
             }
     }});
 }
@@ -71,13 +70,24 @@ function add_sensor(uuid, sensor_name) {
         id: uuid,
         class: 'sensor',
     });
-    row.append($("<td class='sensor-name-cell'></td>"));
-    row.append($("<td class='sensor-activate-cell'></td>"));
-    row.append($("<td><span class='sample-count'>unknown</span><button class='btn btn-xs btn-danger delete-btn'><i class='fa fa-trash-o'></i></button></td>"));
+    row.append($("<td class='sensor-name-cell' />"));
+    row.append($("<td class='sensor-activate-cell' />"));
+    row.append($("<td/>")
+               .append($("<span class='sample-count'>unknown</span>"))
+               .append($("<button class='btn btn-xs btn-primary download-btn'/>")
+                       .append($("<i class='fa fa-download'></i>"))
+                       )
+               .append($("<button class='btn btn-xs btn-danger delete-btn'/>")
+                       .append($("<i class='fa fa-trash-o'></i>"))
+                       )
+              );
     row.append($("<td>2 min</td>"));
-    row.append($("<td>Ok <button class='btn btn-primary btn-sm configure-btn'>Configure</button></td>"));
+    row.append($("<td/>")
+               .append($("Ok"))
+               .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
+               );
 
-    $("#sensors").find("tbody").append(row);
+    $("#sensors tbody").append(row);
     add_sensor_name(uuid, sensor_name, function(name) {
         sensor_name_change(uuid, name);
     });
