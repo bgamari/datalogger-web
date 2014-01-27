@@ -56,10 +56,7 @@ function set_status_active(uuid, is_active) {
     } else {
         $icon.attr('class', 'fa fa-circle-o');
     }
-}
-
-function is_status_active($btn) {
-    return $btn.text() == "Deactivate";
+    $("#" + uuid + " .activate-btn").attr('data-active', is_active);
 }
 
 function add_activate_btn(uuid, is_active, change_activation_fn) {
@@ -68,9 +65,10 @@ function add_activate_btn(uuid, is_active, change_activation_fn) {
         $('<button/>')
             .addClass("activate-btn")
             .addClass("btn btn-sm btn-primary")
+            .attr("data-active", 'false')
             .append($('<i/>'))
             .click(function () {
-                var active = is_status_active($btn);
+                var active = $btn.attr("data-active") == 'true';
                 change_activation_fn(active);
                 set_status_active(uuid, !active);
             });
