@@ -85,7 +85,7 @@ addDevice :: MonadIO m
           => FilePath -> EitherT String (ReaderT DeviceList m) DeviceId
 addDevice devPath = do
     dl <- DL.open devPath
-    checkRTCTime dl
+    EitherT $ liftIO $ runEitherT $ checkRTCTime dl
     devList <- lift ask
     devId <- DL.getDeviceId dl
     name <- DL.get dl DL.deviceName
