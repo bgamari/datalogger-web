@@ -20,7 +20,7 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
                 (evt.keyCode ? evt.keyCode :
                  (evt.which ? evt.which : 0));
             if (charCode == 13)
-                $input.focusout();
+                submit_sensor_name();
         }
     })
     $text.hide();
