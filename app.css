@@ -6,10 +6,6 @@ button.inactive {
     opacity: 0.5;
 }
 
-table#sensors col {
-    width: 15em;
-}
-
 table#sensors th {
     text-align: left;
 }
