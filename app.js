@@ -36,7 +36,7 @@ function refresh_devices() {
         success: function(data, status, xhr) {
             $("#devices").empty();
             for (deviceIdx in data) {
-                $btn = $("<button type='button' class='btn btn-xs btn-warning'><i class='fa fa-eject'></i></button>")
+                $btn = $("<button type='button' class='btn btn-sm btn-warning'><i class='fa fa-eject'></i></button>")
                 $btn.on('click', eject_device(deviceIdx));
 
                 var uuid = data[deviceIdx].toString();
@@ -74,10 +74,14 @@ function add_sensor(uuid, sensor_name) {
     row.append($("<td class='sensor-activate-cell' />"));
     row.append($("<td/>")
                .append($("<span class='sample-count'>unknown</span>"))
-               .append($("<button class='btn btn-xs btn-primary download-btn'/>")
+               .append($("<button class='btn btn-sm btn-primary download-btn'/>")
                        .append($("<i class='fa fa-download'></i>"))
-                       )
-               .append($("<button class='btn btn-xs btn-danger delete-btn'/>")
+                       .click(function() {
+                           location.href = "/devices/" + uuid + "/samples/csv";
+                       })
+                      )
+
+               .append($("<button class='btn btn-sm btn-danger delete-btn'/>")
                        .append($("<i class='fa fa-trash-o'></i>"))
                        )
               );
