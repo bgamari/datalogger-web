@@ -101,8 +101,6 @@ withDevice :: (Device -> ActionM ()) -> ActionM ()
 withDevice action = do
     dId <- param "device"
     devices <- lift $ lookupDeviceId dId
-    liftIO $ print (dId, fmap devId devices)
-    withDeviceList $ liftIO . print . map devId . M.elems
     case devices of
       Nothing  -> do status status404
                      html "Can't find device"
