@@ -1,7 +1,7 @@
 function sensor_name_change(uuid, name){
     $.ajax("/devices/"+uuid+"/name", {
         type: "POST",
-        data: name
+        data: {value: name}
     });
 }
 
