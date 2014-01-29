@@ -162,7 +162,8 @@ fetchSamples dev = do
     case cache of
       Just samples -> return samples
       Nothing -> do
-        samples <- V.fromList <$> DL.getSamples (devLogger dev) 0 100
+        count <- DL.getSampleCount (devLogger dev)
+        samples <- V.fromList <$> DL.getSamples (devLogger dev) 0 count
         liftIO $ atomically $ writeTVar (devSamples dev) (Just samples)
         return samples
 
