@@ -125,18 +125,29 @@ getSetting settingName setting =
             json $ toJSON value
 
 putSetting :: (Parsable a, ToJSON a)
-           => String -> DL.Setting a -> ScottyM ()
-putSetting settingName setting =
+           => String -> DL.Setting a -> Bool -> ScottyM ()
+putSetting settingName setting saveNV =
     post (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
         value <- param "value"
-        liftIO $ runEitherT $ DL.set (devLogger dev) setting value
-        json $ toJSON value
+        result <- liftIO $ runEitherT $ do
+            DL.set (devLogger dev) setting value
+            when saveNV $ DL.saveNVConfig (devLogger dev)
+        case result of
+          Left err -> do status status500
+                         text $ "Error: "<>TL.pack err
+          Right _  -> json $ toJSON value
  
 getPutSetting :: (ToJSON a, Parsable a)
               => String -> DL.Setting a -> ScottyM ()
 getPutSetting name setting = do
     getSetting name setting              
-    putSetting name setting
+    putSetting name setting False
+
+getPutNVSetting :: (ToJSON a, Parsable a)
+                => String -> DL.Setting a -> ScottyM ()
+getPutNVSetting name setting = do
+    getSetting name setting
+    putSetting name setting True
 
 instance ToJSON DL.Sample where
     toJSON s =
@@ -165,8 +176,8 @@ routes = do
     getPutSetting "acquiring" DL.acquiring
     getPutSetting "sample-period" DL.samplePeriod
     getPutSetting "rtc-time" DL.rtcTime
-    getPutSetting "acquire-on-boot" DL.acquireOnBoot
-    getPutSetting "name" DL.deviceName
+    getPutNVSetting "acquire-on-boot" DL.acquireOnBoot
+    getPutNVSetting "name" DL.deviceName
 
     get "/devices" $ do
         withDeviceList $ json . M.keys
