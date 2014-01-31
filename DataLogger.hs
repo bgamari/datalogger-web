@@ -187,7 +187,7 @@ getSamples dl start count = do
     reply <- command dl cmd
     let (errors, samples) = partitionEithers $ map parseSample reply
     when (not $ null errors) $ liftIO $ print errors
-    return samples
+    return $ filter (\s->sampleTime s > 0) samples
     
 parseSample :: String -> Either String Sample
 parseSample l =
