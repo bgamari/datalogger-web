@@ -40,17 +40,17 @@ function get_status(uuid){
     });
 }
 
+function add_sensor(uuid, sensor_name) {
+    add_sensor_row(uuid, sensor_name);
+    get_status(uuid);
+}
 
 function refresh_devices() {
     $.ajax("/devices", {
         type: "POST",
 
         success: function(data, status, xhr) {
-            $("#devices").empty();
             for (deviceIdx in data) {
-//                $btn = $("<button type='button' class='btn btn-sm btn-warning'><i class='fa fa-eject'></i></button>")
-//                $btn.on('click', eject_device(deviceIdx));
-
                 var uuid = data[deviceIdx].toString();
 
                 if ($("#sensors").find("#" + uuid).length == 0) {
@@ -59,16 +59,18 @@ function refresh_devices() {
                     $.ajax("/devices/" + data[deviceIdx] + "/name", {
                         type: "GET",
                         success: function (name, status2, xhr2) {
-                            $item = $("<li>" + deviceIdx+ ": "+ name + "</li>");
-//                            $item.append($btn);
 
-                            $addbtn = $("<button>Add Sensor</button>")
-                                .click(function () {
-                                    $item.remove();
-                                    add_sensor(uuid, name);
-                                });
-                            $item.append($addbtn);
-                            $("#devices").append($item);
+                            add_sensor(uuid,name);
+//                            $item = $("<li>" + deviceIdx+ ": "+ name + "</li>");
+////                            $item.append($btn);
+//
+//                            $addbtn = $("<button>Add Sensor</button>")
+//                                .click(function () {
+//                                    $item.remove();
+//                                    add_sensor(uuid, name);
+//                                });
+//                            $item.append($addbtn);
+//                            $("#devices").append($item);
 
                         }
                     })
@@ -77,10 +79,6 @@ function refresh_devices() {
     }});
 }
 
-function add_sensor(uuid, sensor_name) {
-    add_sensor_row(uuid, sensor_name);
-    get_status(uuid);
-}
 
 function add_new_sensor() {
     var numRows = $("#sensors").find("tr").length;
