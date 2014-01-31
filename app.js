@@ -70,6 +70,7 @@ function refresh_devices() {
                     })
 
                 }  else {
+                    get_status(uuid);
                     activate_row(uuid);
                 }
             }
