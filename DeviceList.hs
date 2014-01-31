@@ -132,7 +132,7 @@ startFetch dev = do
         samples <- execWriterT $ forM_ [0,chunkSz..count] $ \i->do
               liftIO $ atomically $ writeTVar (devSamples dev)
                      $ Left (FetchProgress i count)
-              chunk <- lift $ V.fromList <$> DL.getSamples (devLogger dev) 0 count
+              chunk <- lift $ V.fromList <$> DL.getSamples (devLogger dev) i chunkSz
               tell chunk
         liftIO $ atomically $ writeTVar (devSamples dev) $ Right samples 
 
