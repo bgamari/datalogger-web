@@ -22,7 +22,7 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
             if (charCode == 13)
                 submit_sensor_name();
         }
-    })
+    });
     $text.hide();
     $editBtn.hide();
     $input.appendTo($parent);
@@ -109,7 +109,7 @@ function add_sensor_row(uuid, sensor_name) {
         .click(function (event) {
             event.preventDefault();
             delete_row(uuid);
-//            eject_sensor(uuid);
+            eject_sensor(uuid);
         });
 
     row.append($("<td class='sensor-activate-cell' />")
@@ -129,7 +129,10 @@ function add_sensor_row(uuid, sensor_name) {
                         if (data[i].sensor == 1)
                             filtered.push(data[i]);
                     }
-                    curve_set_data(filtered);
+//                    curve_set_data(filtered);
+
+
+                    curve_set_mini_preview(uuid, $("#preview-chart-"+uuid), filtered)
                 }
                 }
             )
@@ -149,13 +152,22 @@ function add_sensor_row(uuid, sensor_name) {
         )
 
     );
-    row.append($("<td>2 min</td>"));
+    id: uuid,
+    row.append($("<td></td>"))
+        .append($("<div></div>",
+        {
+            id: "preview-chart-"+uuid,
+            backgroundColor:"#337744",
+            width: 200,
+            height: 50
+        }));
+
     row.append($("<td/>")
         .append($("Ok"))
         .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
     );
 
-    $("#sensors tbody").append(row);
+    $("#sensors").find("tbody").append(row);
     add_sensor_name(uuid, sensor_name, function (name) {
         sensor_name_change(uuid, name);
     });
