@@ -26,6 +26,12 @@ function start_stop_acquire(uuid, start_acquiring) {
 }
 
 function get_status(uuid){
+    $.ajax("/devices/"+uuid+"/name", {
+        type: "GET",
+        success: function(data, status, xhr) {
+            set_sensor_name(uuid, data);
+        }
+    });
     $.ajax("/devices/"+uuid+"/acquiring", {
         type: "GET",
         success: function(data, status, xhr) {
@@ -58,6 +64,7 @@ function refresh_devices() {
                         type: "GET",
                         success: function (name, status2, xhr2) {
                             add_sensor(uuid,name);
+//                            add_sensor(uuid+'44',name);
                         }
                     })
                 }  else {
