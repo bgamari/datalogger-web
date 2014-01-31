@@ -138,7 +138,8 @@ fetchWorker dev = forever $ do
         case () of
           -- Still have more samples to fetch
           _ | n < count -> do
-                chunk <- V.fromList <$> DL.getSamples (devLogger dev) n chunkSz
+                let fetchCount = min (count - n) chunkSz 
+                chunk <- V.fromList <$> DL.getSamples (devLogger dev) n fetchCount
                 liftIO $ atomically $ modifyTVar (devSamples dev)
                        $ (V.++ chunk)
                 fetchUpTo count
