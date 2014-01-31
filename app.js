@@ -5,8 +5,23 @@ function sensor_name_change(uuid, name){
     });
 }
 
-function start_stop_acquire(uuid, is_active) {
-    $.ajax("/devices/"+uuid+"/acquiring", { type: "POST" , data: {value: is_active}});
+function eject_sensor(uuid){
+    $.ajax("/devices/"+uuid+"/eject", {
+        type: "POST",
+        data: {}
+    });
+}
+
+function start_stop_acquire(uuid, start_acquiring) {
+    $.ajax("/devices/"+uuid+"/acquiring", {
+        type: "POST" , data: {value: start_acquiring},
+        success: function(data, status, xhr) {
+            if(start_acquiring){
+                deactivate_row(uuid);
+                eject_sensor(uuid);
+            }
+        }
+    });
 }
 
 function get_status(uuid){
@@ -25,9 +40,6 @@ function get_status(uuid){
     });
 }
 
-function eject_device(device) {
-    $("#deviceIdx-"+deviceIdx).remove();
-}
 
 function refresh_devices() {
     $.ajax("/devices", {
@@ -36,8 +48,8 @@ function refresh_devices() {
         success: function(data, status, xhr) {
             $("#devices").empty();
             for (deviceIdx in data) {
-                $btn = $("<button type='button' class='btn btn-sm btn-warning'><i class='fa fa-eject'></i></button>")
-                $btn.on('click', eject_device(deviceIdx));
+//                $btn = $("<button type='button' class='btn btn-sm btn-warning'><i class='fa fa-eject'></i></button>")
+//                $btn.on('click', eject_device(deviceIdx));
 
                 var uuid = data[deviceIdx].toString();
 
@@ -48,7 +60,7 @@ function refresh_devices() {
                         type: "GET",
                         success: function (name, status2, xhr2) {
                             $item = $("<li>" + deviceIdx+ ": "+ name + "</li>");
-                            $item.append($btn);
+//                            $item.append($btn);
 
                             $addbtn = $("<button>Add Sensor</button>")
                                 .click(function () {
