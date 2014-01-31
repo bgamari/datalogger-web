@@ -10,8 +10,9 @@ table#sensors th {
     text-align: left;
 }
 
-table#sensors tr .inactive {
-    background-color: lightgray;
+table#sensors tr.inactive {
+    background-color: lightsteelblue;
+    transition: background-color 0.5s;
 }
 
 tr.sensor button {

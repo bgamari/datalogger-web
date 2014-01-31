@@ -50,7 +50,18 @@ function add_sensor_name(uuid, name, sensor_change_evt) {
 
 
 function deactivate_row(uuid) {
-    $('#sensors').find('tr #' + uuid).addClass('inactive');
+    $('#sensors').find('tr#' + uuid).addClass('inactive');
+}
+
+function activate_row(uuid) {
+    $('#sensors').find('tr#' + uuid).removeClass('inactive');
+}
+
+function delete_row(uuid) {
+    $row = $('#sensors').find('tr#' + uuid);
+    $row.fadeOut(400, function(){
+        $row.remove();
+    });
 }
 
 function set_status_active(uuid, is_active) {
@@ -91,9 +102,20 @@ function add_sensor_row(uuid, sensor_name) {
             eject_sensor(uuid);
             deactivate_row(uuid);
         });
+
+    var $del_sensor_btn = $("<button class='btn btn-sm btn-delsensor'/>")
+        .attr('title', 'delete sensor from table.')
+        .append($("<i class='fa fa-trash-o'></i>"))
+        .click(function (event) {
+            event.preventDefault();
+            delete_row(uuid);
+//            eject_sensor(uuid);
+        });
+
     row.append($("<td class='sensor-activate-cell' />")
         .append($acquire_btn)
         .append($eject_btn)
+        .append($del_sensor_btn)
     );
 
 

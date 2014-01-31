@@ -52,28 +52,15 @@ function refresh_devices() {
         success: function(data, status, xhr) {
             for (deviceIdx in data) {
                 var uuid = data[deviceIdx].toString();
-
                 if ($("#sensors").find("#" + uuid).length == 0) {
-                    // new sensor!
-                    // get name, add new row in table
                     $.ajax("/devices/" + data[deviceIdx] + "/name", {
                         type: "GET",
                         success: function (name, status2, xhr2) {
-
                             add_sensor(uuid,name);
-//                            $item = $("<li>" + deviceIdx+ ": "+ name + "</li>");
-////                            $item.append($btn);
-//
-//                            $addbtn = $("<button>Add Sensor</button>")
-//                                .click(function () {
-//                                    $item.remove();
-//                                    add_sensor(uuid, name);
-//                                });
-//                            $item.append($addbtn);
-//                            $("#devices").append($item);
-
                         }
                     })
+                }  else {
+                    activate_row(uuid);
                 }
             }
     }});
