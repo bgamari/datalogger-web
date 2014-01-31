@@ -144,7 +144,7 @@ routes = do
     get "/devices/:device/sample_count" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.getSampleCount (devLogger dev)
         case result of
-          Right count  -> json count
+          Right count  -> json $ JSON.object ["value" .= count]
           Left error   -> do html "<h1>Error fetching sample count</h1>"
                              status status500
                              
