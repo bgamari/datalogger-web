@@ -59,7 +59,10 @@ getSetting settingName setting =
             text $ TL.pack error
             status status500 
           Right value -> do
-            json $ toJSON value
+            json $ JSON.object [ "setting"  .= settingName
+                               , "deviceId" .= devId dev
+                               , "value"    .= toJSON value
+                               ]
 
 putSetting :: (Parsable a, ToJSON a)
            => String -> DL.Setting a -> Bool -> ScottyM ()
@@ -72,7 +75,10 @@ putSetting settingName setting saveNV =
         case result of
           Left err -> do status status500
                          text $ "Error: "<>TL.pack err
-          Right _  -> json $ toJSON value
+          Right _  -> json $ JSON.object [ "setting"  .= settingName
+                                         , "deviceId" .= devId dev
+                                         , "value"    .= toJSON value
+                                         ]
  
 getPutSetting :: (ToJSON a, Parsable a)
               => String -> DL.Setting a -> ScottyM ()
