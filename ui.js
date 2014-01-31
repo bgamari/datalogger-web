@@ -65,7 +65,6 @@ function add_sensor_row(uuid, sensor_name) {
         class: ['sensor']
     });
     $row.append($("<td class='sensor-name-cell' />")
-            .append($('<span>'+uuid+'</span>'))
             .append( $('<span/>')
                 .addClass("sensor-name")
                 .text(name)
