@@ -167,7 +167,7 @@ function add_sensor_row(uuid, sensor_name) {
             height: 50
         }));
 
-    row.append($("<td/>")
+    $row.append($("<td/>")
         .append($("<span class='configuration-state'>hmm</span>"))
         .append($("<button>Configure</button>")
                 .addClass('btn btn-primary btn-sm configure-btn')

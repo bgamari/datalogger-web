@@ -64,6 +64,7 @@ function refresh_devices() {
                         type: "GET",
                         success: function (name, status2, xhr2) {
                             add_sensor(uuid,name);
+//                            add_sensor(uuid+'44',name);
                         }
                     })
                 }  else {
