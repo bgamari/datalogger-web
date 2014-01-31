@@ -28,25 +28,22 @@ function start_stop_acquire(uuid, start_acquiring) {
 function get_status(uuid){
     $.ajax("/devices/"+uuid+"/name", {
         type: "GET",
-        success: function(namedata, status, xhr) {
-            nuuid = namedata['deviceId'];
-//                            checkName = namedata['setting'];
-            name = namedata['value'];
-
-            set_sensor_name(nuuid, name);
+        success: function(data, status, xhr) {
+            var name = data.value;
+            set_sensor_name(uuid, name);
         }
     });
     $.ajax("/devices/"+uuid+"/acquiring", {
         type: "GET",
         success: function(data, status, xhr) {
-            var is_active = data;
+            var is_active = data.value;
             set_status_active(uuid, is_active);
         }
     });
     $.ajax("/devices/"+uuid+"/sample_count", {
         type: "GET",
         success: function(data, status, xhr) {
-            $("#" + uuid + ' .sample-count').text(data);
+            $("#" + uuid + ' .sample-count').html(data.value);
         }
     });
 }
@@ -61,20 +58,14 @@ function refresh_devices() {
         type: "POST",
 
         success: function(data, status, xhr) {
-            for (var idx =0; idx<data.length; idx++){
-//            for (deviceIdx in data) {
+            for (var idx in data) {
                 var uuid = data[idx].toString();
                 if ($("#sensors").find("#" + uuid).length == 0) {
-                    alert("requesting name for "+uuid);
                     $.ajax("/devices/" + uuid + "/name", {
                         type: "GET",
                         success: function (namedata, status2, xhr2) {
-                            nuuid = namedata['deviceId'];
-//                            checkName = namedata['setting'];
                             name = namedata['value'];
-                            alert("got name "+name+" for "+nuuid)
-                            add_sensor(nuuid,name);
-//                            add_sensor(uuid+'44',name+'44"');
+                            add_sensor(uuid, name);
                         }
                     })
 
