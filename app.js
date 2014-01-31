@@ -28,8 +28,12 @@ function start_stop_acquire(uuid, start_acquiring) {
 function get_status(uuid){
     $.ajax("/devices/"+uuid+"/name", {
         type: "GET",
-        success: function(data, status, xhr) {
-            set_sensor_name(uuid, data);
+        success: function(namedata, status, xhr) {
+            nuuid = namedata['deviceId'];
+//                            checkName = namedata['setting'];
+            name = namedata['value'];
+
+            set_sensor_name(nuuid, name);
         }
     });
     $.ajax("/devices/"+uuid+"/acquiring", {
@@ -57,16 +61,23 @@ function refresh_devices() {
         type: "POST",
 
         success: function(data, status, xhr) {
-            for (deviceIdx in data) {
-                var uuid = data[deviceIdx].toString();
+            for (var idx =0; idx<data.length; idx++){
+//            for (deviceIdx in data) {
+                var uuid = data[idx].toString();
                 if ($("#sensors").find("#" + uuid).length == 0) {
-                    $.ajax("/devices/" + data[deviceIdx] + "/name", {
+                    alert("requesting name for "+uuid);
+                    $.ajax("/devices/" + uuid + "/name", {
                         type: "GET",
-                        success: function (name, status2, xhr2) {
-                            add_sensor(uuid,name);
-//                            add_sensor(uuid+'44',name);
+                        success: function (namedata, status2, xhr2) {
+                            nuuid = namedata['deviceId'];
+//                            checkName = namedata['setting'];
+                            name = namedata['value'];
+                            alert("got name "+name+" for "+nuuid)
+                            add_sensor(nuuid,name);
+//                            add_sensor(uuid+'44',name+'44"');
                         }
                     })
+
                 }  else {
                     activate_row(uuid);
                 }
