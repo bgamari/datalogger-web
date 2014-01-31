@@ -106,15 +106,12 @@ csv xs = do
 
 getSamplesAction :: (V.Vector Sample -> ActionM ()) -> ActionM ()
 getSamplesAction format = withDevice $ \dev->do
-    result <- lift $ runEitherT $ fetch dev
+    result <- lift $ fetch dev
     case result of 
-      Right (Right samples) -> format samples
-      Right (Left (FetchProgress done total)) -> do
+      (samples, Nothing) -> format samples
+      (_, Just (FetchProgress done total)) -> do
           json $ JSON.object [ "done" .= done, "total" .= total ]
           status status202
-      Left error            -> do
-          html "<h1>Error fetching samples</h1>"
-          status status500
 
 routes :: ScottyM () 
 routes = do

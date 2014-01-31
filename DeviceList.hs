@@ -30,7 +30,7 @@ import Data.Aeson (ToJSON, FromJSON)
 import Data.Time.Clock.POSIX (getPOSIXTime)
 import Control.Concurrent
 import Control.Concurrent.STM       
-import Control.Monad (when, forM_, void, liftM)
+import Control.Monad (when, forM_, void, liftM, forever)
 
 import DataLogger (DataLogger, DeviceId, Sample)
 import qualified DataLogger as DL
@@ -76,12 +76,13 @@ modifyDeviceMap :: MonadIO m
 modifyDeviceMap f = do
     DL devMap <- DLT ask
     liftIO $ atomically $ modifyTVar devMap f
-
+                       
 data Device = Device { devName    :: DeviceName -- ^ Friendly name
                      , devPath    :: FilePath   -- ^ Path to serial device
                      , devLogger  :: DataLogger -- ^ @DataLogger@
                      , devId      :: DeviceId   -- ^ Unique @DeviceId@
-                     , devSamples :: TVar (Either FetchProgress (V.Vector Sample))
+                     , devSamples :: TVar (V.Vector Sample)
+                     , devSampleCount :: TVar Int
                      }
 
 removeDevice :: MonadIO m => DeviceId -> DeviceListT m ()
@@ -109,41 +110,57 @@ addDevice devPath = do
     devList <- lift $ DLT ask
     devId <- DL.getDeviceId dl
     name <- DL.get dl DL.deviceName
-    samples <- liftIO $ newTVarIO $ Left $ FetchProgress 0 1
+    samples <- liftIO $ newTVarIO V.empty
+    sampleCount <- liftIO $ newTVarIO 0
     let dev = Device { devPath    = devPath
                      , devLogger  = dl
                      , devId      = devId
                      , devName    = DN name
                      , devSamples = samples
+                     , devSampleCount = sampleCount
                      }
-    lift $ startFetch dev
+    liftIO $ forkIO $ void $ runEitherT $ fetchWorker dev
     lift $ modifyDeviceMap $ M.insert devId dev
     return devId
 
-startFetch :: MonadIO m
-           => Device -> DeviceListT m ()
-startFetch dev = do
-    _ <- liftIO $ forkIO $ void $ runEitherT doFetch
-    return ()
+fetchWorker :: MonadIO m
+            => Device -> EitherT String m ()
+fetchWorker dev = forever $ do
+    count <- DL.getSampleCount (devLogger dev)
+    liftIO $ atomically $ writeTVar (devSampleCount dev) count
+    fetchUpTo count
+    liftIO $ threadDelay (5 * 1000* 1000)
   where
-    doFetch = do
-        count <- DL.getSampleCount (devLogger dev)
-        let chunkSz = 100
-        samples <- execWriterT $ forM_ [0,chunkSz..count] $ \i->do
-              liftIO $ atomically $ writeTVar (devSamples dev)
-                     $ Left (FetchProgress i count)
-              chunk <- lift $ V.fromList <$> DL.getSamples (devLogger dev) i chunkSz
-              tell chunk
-        liftIO $ atomically $ writeTVar (devSamples dev) $ Right samples 
+    chunkSz = 100
+    fetchUpTo :: MonadIO m => Int -> EitherT String m ()
+    fetchUpTo count = do
+        n <- liftIO $ atomically $ V.length `fmap` readTVar (devSamples dev)
+        case () of
+          -- Still have more samples to fetch
+          _ | n < count -> do
+                chunk <- V.fromList <$> DL.getSamples (devLogger dev) n chunkSz
+                liftIO $ atomically $ modifyTVar (devSamples dev)
+                       $ (V.++ chunk)
+                fetchUpTo count
+          -- Sample count has decreased, reset sample cache
+            | n > count -> do
+                liftIO $ atomically $ writeTVar (devSamples dev) V.empty
+                fetchUpTo count
+          -- We have all of the available samples
+            | otherwise -> return ()
 
 data FetchProgress = FetchProgress { progressDone, progressTotal :: Int }
                    deriving (Show)
                    
 fetch :: MonadIO m
-      => Device
-      -> EitherT String (DeviceListT m) (Either FetchProgress (V.Vector Sample))
-fetch dev = do      
-    liftIO $ atomically $ readTVar (devSamples dev)
+      => Device -> DeviceListT m (V.Vector Sample, Maybe FetchProgress)
+fetch dev = liftIO $ atomically $ do 
+    samples <- readTVar (devSamples dev)
+    count <- readTVar (devSampleCount dev)
+    let progress = if V.length samples < count
+                     then Just $ FetchProgress (V.length samples) count
+                     else Nothing
+    return (samples, progress)
 
 -- | Check that the RTC time has been set    
 checkRTCTime :: DataLogger -> EitherT String IO ()
