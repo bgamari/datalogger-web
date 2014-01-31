@@ -28,27 +28,6 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
     $input.appendTo($parent);
 }
 
-function add_sensor_name(uuid, name, sensor_change_evt) {
-    var $parent = $("#" + uuid + ' .sensor-name-cell');
-
-    $('<span/>')
-        .addClass("sensor-name")
-        .text(name)
-        .appendTo($parent);
-
-    var $btn =
-        $("<button><i class='fa fa-pencil'></i></button>")
-            .addClass("edit-btn btn-s")
-            .click(function () {
-                var $editBtn = $('#' + uuid + " .edit-btn");
-                var $text = $('#' + uuid + " .sensor-name");
-                var $parent = $("#" + uuid + ' .sensor-name-cell');
-                edit_text($parent, $text, $editBtn, sensor_change_evt)
-            });
-    $btn.appendTo($parent);
-}
-
-
 function deactivate_row(uuid) {
     $('#sensors').find('tr#' + uuid).addClass('inactive');
 }
@@ -74,13 +53,33 @@ function set_status_active(uuid, is_active) {
     $("#" + uuid + " .activate-btn").attr('data-active', '' + is_active);
 }
 
+function set_sensor_name(uuid, name){
+    var $text = $('#' + uuid + " .sensor-name");
+    $text.text(name);
+}
+
 
 function add_sensor_row(uuid, sensor_name) {
-    var row = $("<tr></tr>", {
+    var $row = $("<tr></tr>", {
         id: uuid,
         class: ['sensor']
     });
-    row.append($("<td class='sensor-name-cell' />"));
+    $row.append($("<td class='sensor-name-cell' />")
+            .append( $('<span/>')
+                .addClass("sensor-name")
+                .text(name)
+
+            )
+            .append(  $("<button><i class='fa fa-pencil'></i></button>")
+                .addClass("edit-btn btn-s")
+                .click(function () {
+                    var $editBtn = $('#' + uuid + " .edit-btn");
+                    var $text = $('#' + uuid + " .sensor-name");
+                    var $parent = $("#" + uuid + ' .sensor-name-cell');
+                    edit_text($parent, $text, $editBtn, function(name) {sensor_name_change(uuid, name); });
+                })
+            )
+        );
 
     var $acquire_btn =
         $('<button/>')
@@ -112,7 +111,7 @@ function add_sensor_row(uuid, sensor_name) {
             eject_sensor(uuid);
         });
 
-    row.append($("<td class='sensor-activate-cell' />")
+    $row.append($("<td class='sensor-activate-cell' />")
         .append($acquire_btn)
         .append($eject_btn)
         .append($del_sensor_btn)
@@ -135,7 +134,7 @@ function add_sensor_row(uuid, sensor_name) {
                 }
             )
         });
-    row.append($("<td/>")
+    $row.append($("<td/>")
         .append($("<span class='sample-count'>unknown</span>"))
         .append($plot_btn)
         .append($("<button class='btn btn-sm btn-primary download-btn'/>")
@@ -156,10 +155,10 @@ function add_sensor_row(uuid, sensor_name) {
             })
             .append($("<i class='fa fa-trash-o'></i>"))
         )
-
     );
-    id: uuid,
-    row.append($("<td></td>"))
+
+
+    $row.append($("<td></td>"))
         .append($("<div></div>",
         {
             id: "preview-chart-"+uuid,
@@ -168,14 +167,11 @@ function add_sensor_row(uuid, sensor_name) {
             height: 50
         }));
 
-    row.append($("<td/>")
+    $row.append($("<td/>")
         .append($("Ok"))
         .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
     );
 
-    $("#sensors").find("tbody").append(row);
-    add_sensor_name(uuid, sensor_name, function (name) {
-        sensor_name_change(uuid, name);
-    });
+    $("#sensors").find("tbody").append($row);
 
 }
