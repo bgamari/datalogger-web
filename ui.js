@@ -129,9 +129,7 @@ function add_sensor_row(uuid, sensor_name) {
                         if (data[i].sensor == 1)
                             filtered.push(data[i]);
                     }
-//                    curve_set_data(filtered);
-
-
+                    curve_set_data(filtered);
                     curve_set_mini_preview(uuid, $("#preview-chart-"+uuid), filtered)
                 }
                 }

@@ -24,7 +24,7 @@ function curve_set_mini_preview(uuid, element, data) {
 
     var preview_chart_id = "#preview-chart-"+uuid ;
 //    var $preview_div = $(preview_chart_id);
-//    $(preview_chart_id).empty();
+    $(preview_chart_id).empty();
     var svg = d3.select(preview_chart_id).append('svg')
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
