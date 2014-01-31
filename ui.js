@@ -159,8 +159,20 @@ function add_sensor_row(uuid, sensor_name) {
     );
     row.append($("<td>2 min</td>"));
     row.append($("<td/>")
-        .append($("Ok"))
-        .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
+        .append($("<span class='configuration-state'>hmm</span>"))
+        .append($("<button>Configure</button>")
+                .addClass('btn btn-primary btn-sm configure-btn')
+                .click(function (event) {
+                    var t = $("#sample-interval").val() * 60;
+                    $.ajax("/devices/"+uuid+"/sample-period", {
+                        type: "POST",
+                        data: {value: t},
+                        success: function (data, status, xhr) {
+                            $("#"+uuid+" .configuration-state").text = "Configured";
+                        }
+                    });
+                })
+               )
     );
 
     $("#sensors tbody").append(row);
