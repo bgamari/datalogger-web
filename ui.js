@@ -145,6 +145,14 @@ function add_sensor_row(uuid, sensor_name) {
         )
 
         .append($("<button class='btn btn-sm btn-danger delete-btn'/>")
+            .click(function (event) {
+                $.ajax("/devices/"+uuid+"/erase", {
+                    type: "POST",
+                    success: function (data, status, xhr) {
+                        $("#"+uuid+" span.sample-count").text = 0;
+                    }
+                });
+            })
             .append($("<i class='fa fa-trash-o'></i>"))
         )
 

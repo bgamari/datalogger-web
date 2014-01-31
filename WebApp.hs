@@ -115,13 +115,13 @@ routes = do
     post "/devices/:device/erase" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.resetSampleCount (devLogger dev)
         case result of
-          Right ()     -> status status200
+          Right ()     -> json $ JSON.object [("success", toJSON True)]
           Left error   -> do html "<h1>Error fetching sample count</h1>"
                              status status500
 
     post "/devices/:device/eject" $ withDevice $ \dev->do
         -- TODO
-        status status200
+        json $ JSON.object [("success", toJSON True)]
         
     get "/devices/:device/sample_count" $ withDevice $ \dev->do
         result <- liftIO $ runEitherT $ DL.getSampleCount (devLogger dev)
