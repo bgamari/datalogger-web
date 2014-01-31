@@ -14,7 +14,8 @@ function eject_sensor(uuid){
 
 function start_stop_acquire(uuid, start_acquiring) {
     $.ajax("/devices/"+uuid+"/acquiring", {
-        type: "POST" , data: {value: start_acquiring},
+        type: "POST",
+        data: {value: start_acquiring},
         success: function(data, status, xhr) {
             if(start_acquiring){
                 deactivate_row(uuid);

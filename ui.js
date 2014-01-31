@@ -167,9 +167,21 @@ function add_sensor_row(uuid, sensor_name) {
             height: 50
         }));
 
-    $row.append($("<td/>")
-        .append($("Ok"))
-        .append($("<button class='btn btn-primary btn-sm configure-btn'>Configure</button>"))
+    row.append($("<td/>")
+        .append($("<span class='configuration-state'>hmm</span>"))
+        .append($("<button>Configure</button>")
+                .addClass('btn btn-primary btn-sm configure-btn')
+                .click(function (event) {
+                    var t = parseFloat($("#sample-interval").val()) * 60;
+                    $.ajax("/devices/"+uuid+"/sample-period", {
+                        type: "POST",
+                        data: {value: t},
+                        success: function (data, status, xhr) {
+                            $("#"+uuid+" .configuration-state").html("Configured");
+                        }
+                    });
+                })
+               )
     );
 
     $("#sensors").find("tbody").append($row);
