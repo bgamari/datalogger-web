@@ -12,6 +12,7 @@ module DataLogger ( findDataLoggers
                   , Sample(..)
                   , SensorId(..)
                   , getSamples
+                  , resetSampleCount
                     -- * Settings
                   , Setting
                   , get
@@ -198,6 +199,9 @@ parseSample l =
     _                 ->
         Left "getSamples: Not enough fields"
 
+resetSampleCount :: MonadIO m => DataLogger -> EitherT String m ()
+resetSampleCount dl = void $ valueCommand dl "n!" "sample count"
+
 showBool :: Bool -> String
 showBool True  = "1"
 showBool False = "0"
@@ -206,7 +210,7 @@ readBool :: String -> Either String Bool
 readBool "1" = Right True
 readBool "0" = Right False
 readBool  a  = Left ("Unexpected boolean value: "++a)
-    
+          
 saveNVConfig :: MonadIO m => DataLogger -> EitherT String m ()
 saveNVConfig dl = void $ command dl "S"          
 

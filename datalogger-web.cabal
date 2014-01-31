@@ -13,7 +13,7 @@ cabal-version:       >=1.10
 
 executable datalogger-web
   main-is:             WebApp.hs
-  other-modules:       DataLogger
+  other-modules:       DataLogger, DeviceList
   other-extensions:    OverloadedStrings, ExistentialQuantification, RankNTypes
   build-depends:       base >=4.6 && <4.8,
                        stm >=2.4 && <3.0,
