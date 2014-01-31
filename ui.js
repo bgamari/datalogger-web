@@ -173,7 +173,7 @@ function add_sensor_row(uuid, sensor_name) {
         .append($("<button>Configure</button>")
                 .addClass('btn btn-primary btn-sm configure-btn')
                 .click(function (event) {
-                    var t = parseInt($("#sample-interval").val()) * 60;
+                    var t = parseFloat($("#sample-interval").val()) * 60;
                     $.ajax("/devices/"+uuid+"/sample-period", {
                         type: "POST",
                         data: {value: t},
