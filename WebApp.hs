@@ -104,6 +104,18 @@ csv xs = do
     setHeader "Content-Type" "text/plain"
     raw $ Csv.encode xs
 
+getSamplesAction :: (V.Vector Sample -> ActionM ()) -> ActionM ()
+getSamplesAction format = withDevice $ \dev->do
+    result <- lift $ runEitherT $ fetch dev
+    case result of 
+      Right (Right samples) -> format samples
+      Right (Left (FetchProgress done total)) -> do
+          json $ JSON.object [ "done" .= done, "total" .= total ]
+          status status202
+      Left error            -> do
+          html "<h1>Error fetching samples</h1>"
+          status status500
+
 routes :: ScottyM () 
 routes = do
     get "/devices" $ do
@@ -136,21 +148,8 @@ routes = do
           Left error   -> do html "<h1>Error fetching sample count</h1>"
                              status status500
                              
-    get "/devices/:device/samples/csv" $ withDevice $ \dev->do
-        result <- lift $ runEitherT $ fetch dev
-        case result of 
-          Right (Right samples) -> csv (V.toList samples)
-          Right (Left progress) -> status status202
-          Left error            -> do html "<h1>Error fetching samples</h1>"
-                                      status status500
-
-    get "/devices/:device/samples/json" $ withDevice $ \dev->do
-        result <- lift $ runEitherT $ fetch dev
-        case result of 
-          Right (Right samples) -> json samples
-          Right (Left progress) -> status status202
-          Left error            -> do html "<h1>Error fetching samples</h1>"
-                                      status status500
+    get "/devices/:device/samples/csv" $ getSamplesAction $ csv . V.toList
+    get "/devices/:device/samples/json" $ getSamplesAction $ json
 
     get "/" $ file "index.html"
     get "/jquery.js" $ file "jquery-2.0.3.js"

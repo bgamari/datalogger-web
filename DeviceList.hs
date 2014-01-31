@@ -15,6 +15,7 @@ module DeviceList ( -- * Device type
                   , filterDevicesByName
                   , lookupDeviceId
                   , fetch
+                  , FetchProgress(..)
                   ) where                
 
 import Control.Error
