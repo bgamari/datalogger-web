@@ -126,6 +126,7 @@ function add_sensor_row(uuid, sensor_name) {
                 { success: function (data, error, xhr) {
                     filtered = [];
                     for (i in data) {
+                        data[i].time *= 1000; // times expected to be in milliseconds
                         if (data[i].sensor == 1)
                             filtered.push(data[i]);
                     }
