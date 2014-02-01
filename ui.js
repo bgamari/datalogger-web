@@ -39,12 +39,14 @@ function delete_row(uuid) {
 function set_status_active(uuid, is_active) {
     var $btn = $("#s"+uuid+" .activate-btn");
     if (is_active) {
-        $('#s'+uuid+' ul li.acquiring span .value').text('logging');
+        $("#s"+uuid).attr('data-acquiring', 'running');
+        $('#s'+uuid+' ul li.acquire-state span .value').text('logging');
         $btn.html("<i class='fa fa-check-circle-o'></i> Stop logging");
         $btn.attr('title', 'Stop logging');
         $('#sensors').find('#s'+uuid).removeClass('inactive');
     } else {
-        $('#s'+uuid+' ul li.acquiring span .value').text('stopped');
+        $("#s"+uuid).attr('data-acquiring', 'stopped');
+        $('#s'+uuid+' ul li.acquire-state span .value').text('stopped');
         $btn.html("<i class='fa fa-circle-o'></i> Start logging");
         $btn.attr('title', 'Start logging');
         $('#sensors').find('#s'+uuid).addClass('inactive');
@@ -146,7 +148,7 @@ function add_sensor_row(uuid, sensor_name) {
     $row.append($("<ul/>")
                 .addClass('actions')
                 .append($('<li/>')
-                        .addClass('acquiring')
+                        .addClass('acquire-state')
                         .append('<span class="meta">Currently the sensor is <span class="value">unknown</span>.</span> ')
                         .append($acquire_btn))
                 .append($('<li/>').append($config))

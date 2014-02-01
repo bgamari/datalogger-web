@@ -23,15 +23,23 @@ ul.actions li {
     margin: 0.2em;
 }
 
+ul.actions li.disabled {
+    opacity: 0.6;
+}
+
 /* sensors list */
 ul#sensors {
     max-width: 80em;
     list-style-type: none;
+    transition: background-color 0.5s;
 }
 
-ul#sensors li.inactive {
-    background-color: PapayaWhip;
-    transition: background-color 0.5s;
+ul#sensors li[data-acquiring="running"] {
+    background-color: #efe;
+}
+
+ul#sensors li[data-acquiring="stopped"] {
+    background-color: #fee;
 }
 
 ul#sensors li span.sensor-name {
