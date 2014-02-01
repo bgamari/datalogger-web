@@ -36,12 +36,15 @@ function delete_row(uuid) {
 }
 
 function set_status_active(uuid, is_active) {
-    var $icon = $("#" + uuid + " .activate-btn i");
+    var $btn = $("#" + uuid + " .activate-btn");
+    var $icon = $btn.find("i");
     if (is_active) {
         $icon.attr('class', 'fa fa-check-circle-o');
+        $btn.attr('title', 'Stop logging');
         $('#sensors').find('tr#' + uuid).removeClass('inactive');
     } else {
         $icon.attr('class', 'fa fa-circle-o');
+        $btn.attr('title', 'Start logging');
         $('#sensors').find('tr#' + uuid).addClass('inactive');
     }
     $("#" + uuid + " .activate-btn").attr('data-active', '' + is_active);
