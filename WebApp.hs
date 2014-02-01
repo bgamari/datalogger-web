@@ -125,6 +125,14 @@ getSamplesAction dev sensor format = do
           format (filterSensor samples)
           status status202
 
+withLoggerResult :: EitherT String IO a -> (a -> ActionM ()) -> ActionM ()
+withLoggerResult loggerAction go = do
+    result <- liftIO $ runEitherT loggerAction
+    case result of
+      Left error   -> do html ("<h1>Error</h1><p>"<>TL.pack error<>"</p>")
+                         status status500
+      Right result -> go result
+
 routes :: ScottyM () 
 routes = do
     get "/devices" $ do
@@ -140,23 +148,17 @@ routes = do
     getPutNVSetting "name" DL.deviceName
     
     post "/devices/:device/erase" $ withDevice $ \dev->do
-        result <- liftIO $ runEitherT $ DL.resetSampleCount (devLogger dev)
-        case result of
-          Right ()     -> json $ JSON.object [("success", toJSON True)]
-          Left error   -> do html "<h1>Error fetching sample count</h1>"
-                             status status500
+        withLoggerResult (DL.resetSampleCount (devLogger dev)) $ \_->do
+            json $ JSON.object [("success", toJSON True)]
 
     post "/devices/:device/eject" $ withDevice $ \dev->do
         -- TODO
         json $ JSON.object [("success", toJSON True)]
         
     get "/devices/:device/sample_count" $ withDevice $ \dev->do
-        result <- liftIO $ runEitherT $ DL.getSampleCount (devLogger dev)
-        case result of
-          Right count  -> json $ JSON.object ["value" .= count]
-          Left error   -> do html "<h1>Error fetching sample count</h1>"
-                             status status500
-                             
+        withLoggerResult (DL.getSampleCount (devLogger dev)) $ \count->do
+            json $ JSON.object ["value" .= count]
+    
     get "/devices/:device/samples/csv" $ withDevice $ \dev->
         getSamplesAction dev Nothing (csv . V.toList)
 
@@ -164,8 +166,8 @@ routes = do
         getSamplesAction dev Nothing json
 
     get "/devices/:device/sensors" $ withDevice $ \dev->do
-        sensors <- liftIO $ runEitherT $ DL.getSensors (devLogger dev)
-        json sensors
+        withLoggerResult (DL.getSensors (devLogger dev)) $ \sensors->do
+            json sensors
 
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
         sensor <- param "sensor"

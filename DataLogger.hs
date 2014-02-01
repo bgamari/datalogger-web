@@ -74,6 +74,7 @@ ioWorker (DataLogger h req) = forever $ do
     (cmd,replyVar) <- atomically $ takeTMVar req
     liftIO $ hPutStr h (cmd ++ "\n")
     reply <- go []
+    --print (cmd, reply)
     print cmd
     atomically $ putTMVar replyVar reply
   where
