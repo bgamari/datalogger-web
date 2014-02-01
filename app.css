@@ -23,12 +23,15 @@ ul#sensors li.inactive {
     transition: background-color 0.5s;
 }
 
+ul#sensors li span.sensor-name {
+    padding-right: 2em;
+}
+
 ul#sensors li span.sensor-name h3 {
     display: inline;
 }
 
 ul#sensors li span.sample-count {
-    font-size: x-large;
 }
 
 /* channels list */
@@ -36,9 +39,14 @@ ul.channels {
     list-style-type: none;
 }
 
+ul.channels li {
+    clear: both;
+    border-top: solid 1px #ddd;
+    max-width: 40%;
+}
+
 ul.channels li span.sparkline {
-    position: relative;
-    left: 50%;
+    float: right;
 }
 
 span.sparkline {

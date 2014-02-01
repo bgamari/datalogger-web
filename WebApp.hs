@@ -178,6 +178,7 @@ routes = do
         getSamplesAction dev (Just sensor) json
 
     get "/" $ file "index.html"
+    get "/logo.svg" $ file "logo.svg"
     get "/jquery.js" $ file "jquery-2.0.3.js"
     get "/ui.js" $ file "ui.js"
     get "/app.css" $ file "app.css"
