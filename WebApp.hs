@@ -112,8 +112,11 @@ getSamplesAction dev sensor format = do
     result <- lift (fetch dev)
     case result of 
       (samples, Nothing) -> format (filterSensor samples)
-      (_, Just (FetchProgress done total)) -> do
-          json $ JSON.object [ "done" .= done, "total" .= total ]
+      (samples, Just (FetchProgress done total)) -> do
+          addHeader "X-Samples-Done" (TL.pack $ show done)
+          addHeader "X-Samples-Total" (TL.pack $ show total)
+          
+          format (filterSensor samples)
           status status202
 
 routes :: ScottyM () 
