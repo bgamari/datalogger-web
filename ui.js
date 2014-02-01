@@ -173,7 +173,7 @@ function add_sensor_row(uuid, sensor_name) {
                 }
                 curve_set_mini_preview(uuid, filtered);
                 if (xhr.status == 202)
-                    Window.addTimeout(1000, update_sparkline);
+                    setTimeout(update_sparkline, 1000);
             }
         });
     };
