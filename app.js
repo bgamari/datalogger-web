@@ -12,11 +12,15 @@ function eject_sensor(uuid){
     });
 }
 
-function start_stop_acquire(uuid, start_acquiring) {
+function start_stop_acquire(uuid, acquire) {
     $.ajax("/devices/"+uuid+"/acquiring", {
         type: "POST",
-        data: {value: start_acquiring},
+        data: {value: acquire},
         success: function(data, status, xhr) {
+            $.ajax("/devices/"+uuid+"/acquire-on-boot", {
+                type: "POST",
+                data: {value: acquire},
+            });
             if(start_acquiring) {
                 eject_sensor(uuid);
             }
