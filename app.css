@@ -13,6 +13,7 @@ button.inactive {
     opacity: 0.5;
 }
 
+/* sensors list */
 ul#sensors {
     display: block;
 }
@@ -28,4 +29,26 @@ ul#sensors li span.sensor-name h3 {
 
 ul#sensors li span.sample-count {
     font-size: x-large;
+}
+
+/* channels list */
+ul.channels {
+    list-style-type: none;
+}
+
+ul.channels li span.sparkline {
+    position: relative;
+    left: 50%;
+}
+
+span.sparkline {
+    height: 4em;
+}
+
+.meta {
+    color: #999;
+}
+
+.meta * {
+    color: #000;
 }

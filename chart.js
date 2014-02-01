@@ -1,4 +1,4 @@
-function curve_set_mini_preview(uuid, data) {
+function sparkline_set_data(span_id, data) {
     var margin = {top: 3, right: 3, bottom: 3, left: 3},
         width = 200 - margin.left - margin.right,
         height = 50 - margin.top - margin.bottom;
@@ -21,9 +21,8 @@ function curve_set_mini_preview(uuid, data) {
         .x(function(d) { return x(d.time); })
         .y(function(d) { return y(d.value); });
 
-    var preview_chart_id = "#preview-chart-"+uuid ;
-    $(preview_chart_id).empty();
-    var svg = d3.select(preview_chart_id).append('svg')
+    $(span_id).empty();
+    var svg = d3.select(span_id).append('svg')
         .attr("width", width + margin.left + margin.right)
         .attr("height", height + margin.top + margin.bottom);
     svg.append("g")

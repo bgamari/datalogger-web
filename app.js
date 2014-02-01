@@ -46,7 +46,7 @@ function get_status(uuid){
     $.ajax("/devices/"+uuid+"/sample_count", {
         type: "GET",
         success: function(data, status, xhr) {
-            $("#" + uuid + ' .sample-count').html(data.value+" samples");
+            $("#s" + uuid + ' .sample-count').html(data.value+" samples");
         }
     });
 }
@@ -63,7 +63,7 @@ function refresh_devices() {
         success: function(data, status, xhr) {
             for (var idx in data) {
                 var uuid = data[idx].toString();
-                if ($("#sensors").find("#" + uuid).length == 0) {
+                if ($("#sensors").find("#s" + uuid).length == 0) {
                     $.ajax("/devices/" + uuid + "/name", {
                         type: "GET",
                         success: function (namedata, status2, xhr2) {

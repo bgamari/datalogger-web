@@ -37,7 +37,7 @@ function delete_row(uuid) {
 }
 
 function set_status_active(uuid, is_active) {
-    var $btn = $("#" + uuid + " .activate-btn");
+    var $btn = $("#s" + uuid + " .activate-btn");
     var $icon = $btn.find("i");
     if (is_active) {
         $icon.attr('class', 'fa fa-check-circle-o');
@@ -48,7 +48,7 @@ function set_status_active(uuid, is_active) {
         $btn.attr('title', 'Start logging');
         $('#sensors').find('tr#' + uuid).addClass('inactive');
     }
-    $("#" + uuid + " .activate-btn").attr('data-active', '' + is_active);
+    $("#s" + uuid + " .activate-btn").attr('data-active', '' + is_active);
 }
 
 function set_sensor_name(uuid, name){
@@ -59,7 +59,7 @@ function set_sensor_name(uuid, name){
 
 function add_sensor_row(uuid, sensor_name) {
     var $row = $("<li></li>", {
-        id: uuid,
+        id: 's'+uuid,
         class: ['sensor']
     });
     $row.append(
@@ -146,7 +146,7 @@ function add_sensor_row(uuid, sensor_name) {
                 $.ajax("/devices/"+uuid+"/erase", {
                     type: "POST",
                     success: function (data, status, xhr) {
-                        $("#"+uuid+" span.sample-count").html("0");
+                        $("#s"+uuid+" span.sample-count").html("0");
                     }
                 });
             })
@@ -154,8 +154,7 @@ function add_sensor_row(uuid, sensor_name) {
     );
 
     $row.append($("<span/>", {
-            id: "preview-chart-"+uuid,
-            class: "sensor-sparkline",
+            class: "sparkline",
             backgroundColor: "#337744",
             width: 200,
             height: 50
@@ -170,7 +169,8 @@ function add_sensor_row(uuid, sensor_name) {
                     if (data[i].sensor == 1)
                         filtered.push(data[i]);
                 }
-                curve_set_mini_preview(uuid, filtered);
+                var span_id = '#sensors li span.sparkline';
+                sparkline_set_data(span_id, filtered);
                 if (xhr.status == 202)
                     setTimeout(update_sparkline, 1000);
             }
@@ -188,12 +188,21 @@ function add_sensor_row(uuid, sensor_name) {
                         type: "POST",
                         data: {value: t},
                         success: function (data, status, xhr) {
-                            $("#"+uuid+" .configuration-state").html("Configured");
+                            $("#s"+uuid+" .configuration-state").html("Configured");
                         }
                     });
                 })
                )
     );
+
+    update_channel_sparkline = function(channel_id) {
+        $.ajax("/devices/"+uuid+"/sensors/"+channel_id+"/samples/json", {
+            success: function (data, error, xhr) {
+                var span_id = '#s'+uuid+' ul.channels [data-channel-id="'+channel_id+'"] .sparkline';
+                sparkline_set_data(span_id, data);
+            }
+        });
+    };
 
     var channels = $("<ul/>")
                    .addClass("channels");
@@ -201,23 +210,32 @@ function add_sensor_row(uuid, sensor_name) {
         success: function(data, error, xhr) {
             for (var i in data) {
                 var channel = data[i];
-                var ch = $("<li>");
-                ch.append($("<span>")
-                          .addClass('channel-name')
-                          .text(channel.name)
-                         );
-                ch.append($("<span>")
-                          .addClass('unit')
-                          .text(channel.unit)
-                         );
-                ch.append($("<span>")
+                var ch = $("<li>")
+                         .attr('data-channel-id', channel.sensor_id);
+                var meta = $("<span>")
+                    .addClass("meta")
+                    .append("channel ")
+                    .append($("<span>")
+                            .addClass('channel-name')
+                            .text(channel.name)
+                           )
+                    .append(" measured in units of ")
+                    .append($("<span>")
+                            .addClass('unit')
+                            .text(channel.unit)
+                           );
+
+                ch.append(meta)
+                  .append($("<span>")
                           .addClass('sparkline')
                          );
+
                 channels.append(ch);
+                update_channel_sparkline(channel.sensor_id);
             }
         }
     });
-    $row.append(channels)
+    $row.append(channels);
 
     $("#sensors").append($row);
 
