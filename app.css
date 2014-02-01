@@ -13,6 +13,15 @@ button.inactive {
     opacity: 0.5;
 }
 
+ul.actions {
+    list-style-type: none;
+}
+
+ul.actions li {
+    display: inline-block;
+    margin: 0.2em;
+}
+
 /* sensors list */
 ul#sensors {
     display: block;

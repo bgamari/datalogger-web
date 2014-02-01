@@ -38,17 +38,16 @@ function delete_row(uuid) {
 
 function set_status_active(uuid, is_active) {
     var $btn = $("#s"+uuid+" .activate-btn");
-    var $icon = $btn.find("i");
     if (is_active) {
-        $icon.attr('class', 'fa fa-check-circle-o');
+        $btn.html("<i class='fa fa-check-circle-o'></i> Stop logging");
         $btn.attr('title', 'Stop logging');
         $('#sensors').find('#s'+uuid).removeClass('inactive');
     } else {
-        $icon.attr('class', 'fa fa-circle-o');
+        $btn.html("<i class='fa fa-circle-o'></i> Start logging");
         $btn.attr('title', 'Start logging');
         $('#sensors').find('#s'+uuid).addClass('inactive');
     }
-    $("#s"+uuid+" .activate-btn").attr('data-active', ''+is_active);
+    $btn.attr('data-active', ''+is_active);
 }
 
 function set_sensor_name(uuid, name){
@@ -109,70 +108,18 @@ function add_sensor_row(uuid, sensor_name) {
                 set_status_active(uuid, !is_acquiring);
             });
 
-    var $eject_btn = $("<button class='btn btn-sm btn-warning'/>")
-        .attr('title', 'put sensor in low power without starting acquisition.')
-        .append($("<i class='fa fa-eject'></i>"))
-        .click(function () {
-            eject_sensor(uuid);
-        });
-
-    var $del_sensor_btn = $("<button class='btn btn-sm btn-delsensor'/>")
-        .attr('title', 'delete sensor from table.')
-        .append($("<i class='fa fa-trash-o'></i>"))
+    var $del_sensor_btn = $("<button class='btn btn-warning btn-sm btn-delsensor'/>")
+        .attr('title', 'delete sensor from table')
+        .append("<i class='fa fa-times'></i> Remove")
         .click(function (event) {
             event.preventDefault();
             delete_row(uuid);
             eject_sensor(uuid);
         });
 
-    $row.append($("<span class='sensor-activate-cell' />")
-        .append($acquire_btn)
-        .append($eject_btn)
-        .append($del_sensor_btn)
-    );
-
-    var $plot_btn = $("<button class='btn btn-sm btn-primary plot-btn' />")
-        .append($("<i class='fa fa-bar-chart-o'></i>"))
-        .click(function () {
-            $.ajax('/devices/'+uuid+'/samples/json', {
-                success: function (data, error, xhr) {
-                    filtered = [];
-                    for (i in data) {
-                        data[i].time *= 1000; // times expected to be in milliseconds
-                        if (data[i].sensor == 1)
-                            filtered.push(data[i]);
-                    }
-                    curve_set_data(filtered);
-                    update_channel_sparklines();
-                }
-            });
-        });
-
-    $row.append($("<span class='sample-count'>unknown</span>"))
-        .append($plot_btn)
-        .append($("<button class='btn btn-sm btn-primary download-btn'/>")
-                .append($("<i class='fa fa-download'></i>"))
-                .click(function () {
-                    location.href = "/devices/"+uuid+"/samples/csv";
-                })
-               );
-
-    $row.append(
-        $("<button class='btn btn-sm btn-danger delete-btn'/>")
-            .click(function (event) {
-                $.ajax("/devices/"+uuid+"/erase", {
-                    type: "POST",
-                    success: function (data, status, xhr) {
-                        $("#s"+uuid+" span.sample-count").html("0");
-                    }
-                });
-            })
-            .append($("<i class='fa fa-trash-o'></i>"))
-    );
-
-    $row.append($("<span/>")
-        .append($("<span class='configuration-state'>hmm</span>"))
-        .append($("<button>Configure</button>")
+    var $config = $("<span/>")
+        .append($("<span class='configuration-state'></span>"))
+        .append($("<button><i class='fa fa-cog'></i> Configure</button>")
                 .addClass('btn btn-primary btn-sm configure-btn')
                 .click(function (event) {
                     var t = parseFloat($("#sample-interval").val()) * 60;
@@ -184,8 +131,70 @@ function add_sensor_row(uuid, sensor_name) {
                         }
                     });
                 })
+               );
+
+    $row.append($("<ul/>")
+                .addClass('actions')
+                .append($('<li/>').append($acquire_btn))
+                .append($('<li/>').append($config))
+                .append($('<li/>').append($del_sensor_btn))
+               );
+
+    function do_plot() {
+        $.ajax('/devices/'+uuid+'/samples/json', {
+            success: function (data, error, xhr) {
+                filtered = [];
+                for (i in data) {
+                    data[i].time *= 1000; // times expected to be in milliseconds
+                    if (data[i].sensor == 1)
+                        filtered.push(data[i]);
+                }
+                curve_set_data(filtered);
+                update_channel_sparklines();
+            }
+        });
+    }
+
+    $data_controls = $("<ul/>")
+                     .addClass('actions');
+    $data_controls.append(
+        $('<li/>').append($("<span class='sample-count'>unknown</span>"))
+    );
+
+    $data_controls.append(
+        $("<li/>")
+        .append($("<button class='btn btn-sm btn-primary plot-btn' />")
+                .append("<i class='fa fa-bar-chart-o'></i> Plot")
+                .click(do_plot)
                )
     );
+
+    $data_controls.append(
+        $("<li/>")
+        .append($("<button class='btn btn-sm btn-primary download-btn'/>")
+                .append("<i class='fa fa-download'></i> CSV")
+                .click(function () {
+                    location.href = "/devices/"+uuid+"/samples/csv";
+                })
+               )
+    );
+
+    $data_controls.append(
+        $('<li/>')
+        .append($("<button class='btn btn-sm btn-danger delete-btn'/>")
+                .click(function (event) {
+                    $.ajax("/devices/"+uuid+"/erase", {
+                        type: "POST",
+                        success: function (data, status, xhr) {
+                            $("#s"+uuid+" span.sample-count").html("0");
+                        }
+                    });
+                })
+                .append("<i class='fa fa-trash-o'></i> Erase")
+               )
+    );
+
+    $row.append($data_controls);
 
     var channels = $("<ul/>")
                    .addClass("channels");
