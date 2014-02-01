@@ -122,6 +122,7 @@ function add_sensor_row(uuid, sensor_name) {
                             filtered.push(data[i]);
                     }
                     curve_set_data(filtered);
+                    update_sparkline();
                 }
             });
         });
