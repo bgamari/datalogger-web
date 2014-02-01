@@ -56,6 +56,23 @@ function set_sensor_name(uuid, name){
     $text.text(name);
 }
 
+function update_channel_sparkline(uuid, channel_id) {
+    $.ajax("/devices/"+uuid+"/sensors/"+channel_id+"/samples/json", {
+        success: function (data, error, xhr) {
+            var span_id = '#s'+uuid+' ul.channels [data-channel-id="'+channel_id+'"] .sparkline';
+            sparkline_set_data(span_id, data);
+            if (xhr.status == 202)
+                setTimeout(update_channel_sparkline, 1000, channel_id);
+        }
+    });
+};
+
+function update_channel_sparklines(uuid) {
+    $("#s"+uuid+" ul#channels li").each(function(i, $el) {
+        var channel = $el.attr('data-channel-id');
+        update_channel_sparkline(uuid, channel);
+    });
+}
 
 function add_sensor_row(uuid, sensor_name) {
     var $row = $("<li></li>", {
@@ -126,7 +143,7 @@ function add_sensor_row(uuid, sensor_name) {
                             filtered.push(data[i]);
                     }
                     curve_set_data(filtered);
-                    update_sparkline();
+                    update_channel_sparklines();
                 }
             });
         });
@@ -153,31 +170,6 @@ function add_sensor_row(uuid, sensor_name) {
             .append($("<i class='fa fa-trash-o'></i>"))
     );
 
-    $row.append($("<span/>", {
-            class: "sparkline",
-            backgroundColor: "#337744",
-            width: 200,
-            height: 50
-        })
-    );
-    update_sparkline = function() {
-        $.ajax("/devices/"+uuid+"/samples/json", {
-            success: function (data, error, xhr) {
-                filtered = [];
-                for (i in data) {
-                    data[i].time *= 1000; // times expected to be in milliseconds
-                    if (data[i].sensor == 1)
-                        filtered.push(data[i]);
-                }
-                var span_id = '#sensors li span.sparkline';
-                sparkline_set_data(span_id, filtered);
-                if (xhr.status == 202)
-                    setTimeout(update_sparkline, 1000);
-            }
-        });
-    };
-    update_sparkline();
-
     $row.append($("<span/>")
         .append($("<span class='configuration-state'>hmm</span>"))
         .append($("<button>Configure</button>")
@@ -194,15 +186,6 @@ function add_sensor_row(uuid, sensor_name) {
                 })
                )
     );
-
-    update_channel_sparkline = function(channel_id) {
-        $.ajax("/devices/"+uuid+"/sensors/"+channel_id+"/samples/json", {
-            success: function (data, error, xhr) {
-                var span_id = '#s'+uuid+' ul.channels [data-channel-id="'+channel_id+'"] .sparkline';
-                sparkline_set_data(span_id, data);
-            }
-        });
-    };
 
     var channels = $("<ul/>")
                    .addClass("channels");
@@ -231,7 +214,7 @@ function add_sensor_row(uuid, sensor_name) {
                          );
 
                 channels.append(ch);
-                update_channel_sparkline(channel.sensor_id);
+                update_channel_sparkline(uuid, channel.sensor_id);
             }
         }
     });
