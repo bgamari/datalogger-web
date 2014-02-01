@@ -12,7 +12,6 @@ module DeviceList ( -- * Device type
                   , getDeviceList
                   , withDeviceList
                   , refreshDevices
-                  , filterDevicesByName
                   , lookupDeviceId
                   , fetch
                   , FetchProgress(..)
@@ -51,10 +50,6 @@ runDeviceListT :: (MonadIO m) => DeviceList -> DeviceListT m a -> m a
 runDeviceListT devList (DLT m) = do
     runReaderT m devList
 
-filterDevicesByName :: MonadIO m => DeviceName -> DeviceListT m [Device]
-filterDevicesByName name =
-    withDeviceMap $ return . filter (\dev->devName dev == name) . M.elems
-
 lookupDeviceId :: MonadIO m => DeviceId -> DeviceListT m (Maybe Device)
 lookupDeviceId devId = withDeviceMap $ return . M.lookup devId
 
@@ -77,8 +72,7 @@ modifyDeviceMap f = do
     DL devMap <- DLT ask
     liftIO $ atomically $ modifyTVar devMap f
                        
-data Device = Device { devName    :: DeviceName -- ^ Friendly name
-                     , devPath    :: FilePath   -- ^ Path to serial device
+data Device = Device { devPath    :: FilePath   -- ^ Path to serial device
                      , devLogger  :: DataLogger -- ^ @DataLogger@
                      , devId      :: DeviceId   -- ^ Unique @DeviceId@
                      , devSamples :: TVar (V.Vector Sample)
@@ -109,13 +103,11 @@ addDevice devPath = do
     EitherT $ liftIO $ runEitherT $ checkRTCTime dl
     devList <- lift $ DLT ask
     devId <- DL.getDeviceId dl
-    name <- DL.get dl DL.deviceName
     samples <- liftIO $ newTVarIO V.empty
     sampleCount <- liftIO $ newTVarIO 0
     let dev = Device { devPath    = devPath
                      , devLogger  = dl
                      , devId      = devId
-                     , devName    = DN name
                      , devSamples = samples
                      , devSampleCount = sampleCount
                      }
