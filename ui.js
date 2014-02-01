@@ -153,8 +153,9 @@ function add_sensor_row(uuid, sensor_name) {
             .append($("<i class='fa fa-trash-o'></i>"))
     );
 
-    $row.append($("<span class='sensor-sparkline'/>", {
+    $row.append($("<span/>", {
             id: "preview-chart-"+uuid,
+            class: "sensor-sparkline",
             backgroundColor: "#337744",
             width: 200,
             height: 50
