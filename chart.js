@@ -1,4 +1,3 @@
-
 function curve_set_mini_preview(uuid, element, data) {
     var margin = {top: 3, right: 3, bottom: 3, left: 3},
         width = 200 - margin.left - margin.right,
@@ -23,7 +22,6 @@ function curve_set_mini_preview(uuid, element, data) {
         .y(function(d) { return y(d.value); });
 
     var preview_chart_id = "#preview-chart-"+uuid ;
-//    var $preview_div = $(preview_chart_id);
     $(preview_chart_id).empty();
     var svg = d3.select(preview_chart_id).append('svg')
         .attr("width", width + margin.left + margin.right)
@@ -34,20 +32,12 @@ function curve_set_mini_preview(uuid, element, data) {
     x.domain(d3.extent(data, function(d) { return d.time; }));
     y.domain(d3.extent(data, function(d) { return d.value; }));
 
-//    svg.append("g")
-//        .attr("class", "x axis")
-//        .attr("transform", "translate(0," + height + ")")
-//        .call(xAxis);
-
     svg.append("g")
-//        .attr("class", "y axis")
-//        .call(yAxis)
         .append("text")
         .attr("transform", "rotate(-90)")
         .attr("y", 6)
         .attr("dy", ".71em")
         .style("text-anchor", "end")
-//        .text("Value");
 
     svg.append("path")
         .datum(data)
