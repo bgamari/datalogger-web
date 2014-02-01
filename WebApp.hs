@@ -29,8 +29,14 @@ deriving instance Parsable DeviceId
 deriving instance Parsable DeviceName
 deriving instance Parsable DL.SensorId
 
-instance ToJSON DeviceId where
-    toJSON (DL.DevId devId) = toJSON devId
+deriving instance ToJSON DeviceId
+deriving instance ToJSON DL.SensorId
+
+instance ToJSON DL.Sensor where
+    toJSON s = JSON.object [ "sensor_id" .= DL.sensorId s
+                           , "name"      .= DL.sensorName s
+                           , "unit"      .= DL.sensorUnit s
+                           ]
 
 type ScottyM = ScottyT TL.Text (DeviceListT IO)
 type ActionM = ActionT TL.Text (DeviceListT IO)
@@ -153,8 +159,13 @@ routes = do
                              
     get "/devices/:device/samples/csv" $ withDevice $ \dev->
         getSamplesAction dev Nothing (csv . V.toList)
+
     get "/devices/:device/samples/json" $ withDevice $ \dev->
         getSamplesAction dev Nothing json
+
+    get "/devices/:device/sensors" $ withDevice $ \dev->do
+        sensors <- liftIO $ runEitherT $ DL.getSensors (devLogger dev)
+        json sensors
 
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
         sensor <- param "sensor"

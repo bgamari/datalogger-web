@@ -8,9 +8,13 @@ module DataLogger ( findDataLoggers
                   , getSampleCount
                   , getDeviceId
                   , DeviceId(..)
-                    -- * Fetching samples
-                  , Sample(..)
+                  , getSensors
                   , SensorId(..)
+                  , Sensor(..)
+                  , getLastSamples
+                    -- * Fetching samples
+                  , forceSample
+                  , Sample(..)
                   , getSamples
                   , resetSampleCount
                     -- * Settings
