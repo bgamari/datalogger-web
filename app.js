@@ -17,8 +17,7 @@ function start_stop_acquire(uuid, start_acquiring) {
         type: "POST",
         data: {value: start_acquiring},
         success: function(data, status, xhr) {
-            if(start_acquiring){
-                deactivate_row(uuid);
+            if(start_acquiring) {
                 eject_sensor(uuid);
             }
         }
@@ -71,7 +70,6 @@ function refresh_devices() {
 
                 }  else {
                     get_status(uuid);
-                    activate_row(uuid);
                 }
             }
     }});

@@ -28,14 +28,6 @@ function edit_text($parent, $text, $editBtn, text_change_fn) {
     $input.appendTo($parent);
 }
 
-function deactivate_row(uuid) {
-    $('#sensors').find('tr#' + uuid).addClass('inactive');
-}
-
-function activate_row(uuid) {
-    $('#sensors').find('tr#' + uuid).removeClass('inactive');
-}
-
 function delete_row(uuid) {
     $row = $('#sensors').find('tr#' + uuid);
     $row.fadeOut(400, function(){
@@ -47,8 +39,10 @@ function set_status_active(uuid, is_active) {
     var $icon = $("#" + uuid + " .activate-btn i");
     if (is_active) {
         $icon.attr('class', 'fa fa-check-circle-o');
+        $('#sensors').find('tr#' + uuid).removeClass('inactive');
     } else {
         $icon.attr('class', 'fa fa-circle-o');
+        $('#sensors').find('tr#' + uuid).addClass('inactive');
     }
     $("#" + uuid + " .activate-btn").attr('data-active', '' + is_active);
 }
@@ -99,7 +93,6 @@ function add_sensor_row(uuid, sensor_name) {
         .append($("<i class='fa fa-eject'></i>"))
         .click(function () {
             eject_sensor(uuid);
-            deactivate_row(uuid);
         });
 
     var $del_sensor_btn = $("<button class='btn btn-sm btn-delsensor'/>")
@@ -117,7 +110,6 @@ function add_sensor_row(uuid, sensor_name) {
         .append($del_sensor_btn)
     );
 
-
     var $plot_btn = $("<button class='btn btn-sm btn-primary plot-btn' />")
         .append($("<i class='fa fa-bar-chart-o'></i>"))
         .click(function () {
@@ -133,6 +125,7 @@ function add_sensor_row(uuid, sensor_name) {
                 }
             });
         });
+
     $row.append($("<td/>")
         .append($("<span class='sample-count'>unknown</span>"))
         .append($plot_btn)
