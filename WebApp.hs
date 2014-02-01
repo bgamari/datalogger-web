@@ -27,6 +27,7 @@ import DeviceList
 
 deriving instance Parsable DeviceId
 deriving instance Parsable DeviceName
+deriving instance Parsable DL.SensorId
 
 instance ToJSON DeviceId where
     toJSON (DL.DevId devId) = toJSON devId
@@ -104,11 +105,13 @@ csv xs = do
     setHeader "Content-Type" "text/plain"
     raw $ Csv.encode xs
 
-getSamplesAction :: (V.Vector Sample -> ActionM ()) -> ActionM ()
-getSamplesAction format = withDevice $ \dev->do
-    result <- lift $ fetch dev
+getSamplesAction :: Device -> Maybe DL.SensorId
+                 -> (V.Vector Sample -> ActionM ()) -> ActionM ()
+getSamplesAction dev sensor format = do
+    let filterSensor = maybe id (\sensor->V.filter (\s->DL.sampleSensor s == sensor)) sensor
+    result <- lift (fetch dev)
     case result of 
-      (samples, Nothing) -> format samples
+      (samples, Nothing) -> format (filterSensor samples)
       (_, Just (FetchProgress done total)) -> do
           json $ JSON.object [ "done" .= done, "total" .= total ]
           status status202
@@ -145,8 +148,18 @@ routes = do
           Left error   -> do html "<h1>Error fetching sample count</h1>"
                              status status500
                              
-    get "/devices/:device/samples/csv" $ getSamplesAction $ csv . V.toList
-    get "/devices/:device/samples/json" $ getSamplesAction $ json
+    get "/devices/:device/samples/csv" $ withDevice $ \dev->
+        getSamplesAction dev Nothing (csv . V.toList)
+    get "/devices/:device/samples/json" $ withDevice $ \dev->
+        getSamplesAction dev Nothing json
+
+    get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
+        sensor <- param "sensor"
+        getSamplesAction dev (Just sensor) (csv . V.toList)
+
+    get "/devices/:device/sensors/:sensor/samples/json" $ withDevice $ \dev->do
+        sensor <- param "sensor"
+        getSamplesAction dev (Just sensor) json
 
     get "/" $ file "index.html"
     get "/jquery.js" $ file "jquery-2.0.3.js"
