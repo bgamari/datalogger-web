@@ -1,4 +1,4 @@
-function curve_set_mini_preview(uuid, element, data) {
+function curve_set_mini_preview(uuid, data) {
     var margin = {top: 3, right: 3, bottom: 3, left: 3},
         width = 200 - margin.left - margin.right,
         height = 50 - margin.top - margin.bottom;

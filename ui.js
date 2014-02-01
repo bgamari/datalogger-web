@@ -121,8 +121,8 @@ function add_sensor_row(uuid, sensor_name) {
     var $plot_btn = $("<button class='btn btn-sm btn-primary plot-btn' />")
         .append($("<i class='fa fa-bar-chart-o'></i>"))
         .click(function () {
-            $.ajax('/devices/' + uuid + '/samples/json',
-                { success: function (data, error, xhr) {
+            $.ajax('/devices/' + uuid + '/samples/json', {
+                success: function (data, error, xhr) {
                     filtered = [];
                     for (i in data) {
                         data[i].time *= 1000; // times expected to be in milliseconds
@@ -130,10 +130,8 @@ function add_sensor_row(uuid, sensor_name) {
                             filtered.push(data[i]);
                     }
                     curve_set_data(filtered);
-                    curve_set_mini_preview(uuid, $("#preview-chart-"+uuid), filtered)
                 }
-                }
-            )
+            });
         });
     $row.append($("<td/>")
         .append($("<span class='sample-count'>unknown</span>"))
@@ -160,13 +158,29 @@ function add_sensor_row(uuid, sensor_name) {
 
 
     $row.append($("<td></td>"))
-        .append($("<div></div>",
-        {
+        .append($("<div></div>", {
             id: "preview-chart-"+uuid,
             backgroundColor:"#337744",
             width: 200,
             height: 50
-        }));
+        })
+    );
+    update_sparkline = function() {
+        $.ajax("/devices/"+uuid+"/samples/json", {
+            success: function (data, error, xhr) {
+                filtered = [];
+                for (i in data) {
+                    data[i].time *= 1000; // times expected to be in milliseconds
+                    if (data[i].sensor == 1)
+                        filtered.push(data[i]);
+                }
+                curve_set_mini_preview(uuid, filtered);
+                if (xhr.status == 202)
+                    Window.addTimeout(1000, update_sparkline);
+            }
+        });
+    };
+    update_sparkline();
 
     $row.append($("<td/>")
         .append($("<span class='configuration-state'>hmm</span>"))
