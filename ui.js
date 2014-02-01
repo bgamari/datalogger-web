@@ -65,7 +65,7 @@ function update_channel_sparkline(uuid, channel_id) {
             var span_id = '#s'+uuid+' ul.channels [data-channel-id="'+channel_id+'"] .sparkline';
             sparkline_set_data(span_id, data);
             if (xhr.status == 202)
-                setTimeout(update_channel_sparkline, 1000, channel_id);
+                setTimeout(update_channel_sparkline, 1000, uuid, channel_id);
         }
     });
 };
