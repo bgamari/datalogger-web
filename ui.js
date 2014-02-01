@@ -39,10 +39,12 @@ function delete_row(uuid) {
 function set_status_active(uuid, is_active) {
     var $btn = $("#s"+uuid+" .activate-btn");
     if (is_active) {
+        $('#s'+uuid+' ul li.acquiring span .value').text('logging');
         $btn.html("<i class='fa fa-check-circle-o'></i> Stop logging");
         $btn.attr('title', 'Stop logging');
         $('#sensors').find('#s'+uuid).removeClass('inactive');
     } else {
+        $('#s'+uuid+' ul li.acquiring span .value').text('stopped');
         $btn.html("<i class='fa fa-circle-o'></i> Start logging");
         $btn.attr('title', 'Start logging');
         $('#sensors').find('#s'+uuid).addClass('inactive');
@@ -74,16 +76,27 @@ function update_channel_sparklines(uuid) {
 }
 
 function add_sensor_row(uuid, sensor_name) {
-    var $row = $("<li></li>", {
+    var $sensor = $("<li></li>", {
         id: 's'+uuid,
         class: ['sensor']
     });
+    
+    var $del_sensor_btn = $("<button class='btn btn-warning btn-xs btn-delsensor'/>")
+        .attr('title', 'delete sensor from table')
+        .append("<i class='fa fa-times'></i> Remove")
+        .click(function (event) {
+            event.preventDefault();
+            delete_row(uuid);
+            eject_sensor(uuid);
+        });
+
+    var $row = $sensor.append('<div/>');
     $row.append(
         $('<span/>')
             .addClass('sensor-name')
             .append($('<h3/>').text(name))
             .append($("<button><i class='fa fa-pencil'></i></button>")
-                    .addClass("edit-btn btn-s")
+                    .addClass("edit-btn btn btn-default btn-xs")
                     .click(function () {
                         var $sensor = $('#s'+uuid)
                         var $editBtn = $sensor.find("span.sensor-name .edit-btn");
@@ -93,12 +106,17 @@ function add_sensor_row(uuid, sensor_name) {
                         });
                     })
                    )
+
+            .append($('<ul/>')
+                    .addClass('actions')
+                    .append($('<li/>').append($del_sensor_btn))
+                   )
         );
 
     var $acquire_btn =
         $('<button/>')
             .addClass("activate-btn")
-            .addClass("btn btn-sm btn-primary")
+            .addClass("btn btn-xs btn-primary")
             .attr("data-active", 'false')
             .append($('<i/>'))
             .click(function () {
@@ -108,19 +126,10 @@ function add_sensor_row(uuid, sensor_name) {
                 set_status_active(uuid, !is_acquiring);
             });
 
-    var $del_sensor_btn = $("<button class='btn btn-warning btn-sm btn-delsensor'/>")
-        .attr('title', 'delete sensor from table')
-        .append("<i class='fa fa-times'></i> Remove")
-        .click(function (event) {
-            event.preventDefault();
-            delete_row(uuid);
-            eject_sensor(uuid);
-        });
-
     var $config = $("<span/>")
         .append($("<span class='configuration-state'></span>"))
         .append($("<button><i class='fa fa-cog'></i> Configure</button>")
-                .addClass('btn btn-primary btn-sm configure-btn')
+                .addClass('btn btn-primary btn-xs configure-btn')
                 .click(function (event) {
                     var t = parseFloat($("#sample-interval").val()) * 60;
                     $.ajax("/devices/"+uuid+"/sample-period", {
@@ -133,11 +142,14 @@ function add_sensor_row(uuid, sensor_name) {
                 })
                );
 
+    var $row = $sensor.append('<div/>');
     $row.append($("<ul/>")
                 .addClass('actions')
-                .append($('<li/>').append($acquire_btn))
+                .append($('<li/>')
+                        .addClass('acquiring')
+                        .append('<span class="meta">Currently the sensor is <span class="value">unknown</span>.</span> ')
+                        .append($acquire_btn))
                 .append($('<li/>').append($config))
-                .append($('<li/>').append($del_sensor_btn))
                );
 
     function do_plot() {
@@ -158,12 +170,12 @@ function add_sensor_row(uuid, sensor_name) {
     $data_controls = $("<ul/>")
                      .addClass('actions');
     $data_controls.append(
-        $('<li/>').append($("<span class='sample-count'>unknown</span>"))
+        $('<li/>').append($("<span class='sample-count meta'>Currently <span class='value'>unknown</span> samples are stored on the sensor.</span>"))
     );
 
     $data_controls.append(
         $("<li/>")
-        .append($("<button class='btn btn-sm btn-primary plot-btn' />")
+        .append($("<button class='btn btn-xs btn-primary plot-btn' />")
                 .append("<i class='fa fa-bar-chart-o'></i> Plot")
                 .click(do_plot)
                )
@@ -171,7 +183,7 @@ function add_sensor_row(uuid, sensor_name) {
 
     $data_controls.append(
         $("<li/>")
-        .append($("<button class='btn btn-sm btn-primary download-btn'/>")
+        .append($("<button class='btn btn-xs btn-primary download-btn'/>")
                 .append("<i class='fa fa-download'></i> CSV")
                 .click(function () {
                     location.href = "/devices/"+uuid+"/samples/csv";
@@ -181,7 +193,7 @@ function add_sensor_row(uuid, sensor_name) {
 
     $data_controls.append(
         $('<li/>')
-        .append($("<button class='btn btn-sm btn-danger delete-btn'/>")
+        .append($("<button class='btn btn-xs btn-danger delete-btn'/>")
                 .click(function (event) {
                     $.ajax("/devices/"+uuid+"/erase", {
                         type: "POST",
@@ -194,6 +206,7 @@ function add_sensor_row(uuid, sensor_name) {
                )
     );
 
+    var $row = $sensor.append('<div/>');
     $row.append($data_controls);
 
     var channels = $("<ul/>")
@@ -227,6 +240,7 @@ function add_sensor_row(uuid, sensor_name) {
             }
         }
     });
+    var $row = $sensor.append('<div/>');
     $row.append(channels);
 
     $("#sensors").append($row);

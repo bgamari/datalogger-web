@@ -15,6 +15,7 @@ button.inactive {
 
 ul.actions {
     list-style-type: none;
+    display: inline;
 }
 
 ul.actions li {
@@ -24,7 +25,8 @@ ul.actions li {
 
 /* sensors list */
 ul#sensors {
-    display: block;
+    max-width: 80em;
+    list-style-type: none;
 }
 
 ul#sensors li.inactive {
@@ -51,7 +53,7 @@ ul.channels {
 ul.channels li {
     clear: both;
     border-top: solid 1px #ddd;
-    max-width: 40%;
+    max-width: 90%;
 }
 
 ul.channels li span.sparkline {

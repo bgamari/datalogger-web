@@ -46,7 +46,7 @@ function get_status(uuid){
     $.ajax("/devices/"+uuid+"/sample_count", {
         type: "GET",
         success: function(data, status, xhr) {
-            $("#s" + uuid + ' .sample-count').html(data.value+" samples");
+            $("#s" + uuid + ' .sample-count .value').html(data.value);
         }
     });
 }
