@@ -195,6 +195,30 @@ function add_sensor_row(uuid, sensor_name) {
                )
     );
 
+    var channels = $("<ul/>")
+                   .addClass("channels");
+    $.ajax("/devices/"+uuid+"/sensors", {
+        success: function(data, error, xhr) {
+            for (var i in data) {
+                var channel = data[i];
+                var ch = $("<li>");
+                ch.append($("<span>")
+                          .addClass('channel-name')
+                          .text(channel.name)
+                         );
+                ch.append($("<span>")
+                          .addClass('unit')
+                          .text(channel.unit)
+                         );
+                ch.append($("<span>")
+                          .addClass('sparkline')
+                         );
+                channels.append(ch);
+            }
+        }
+    });
+    $row.append(channels)
+
     $("#sensors").append($row);
 
 }
