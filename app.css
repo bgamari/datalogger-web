@@ -1,3 +1,10 @@
+div#global-config {
+    padding: 2em
+}
+
+div#global-config div {
+}
+
 .sidebar {
     float: left;
 }

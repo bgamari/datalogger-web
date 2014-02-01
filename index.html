@@ -15,15 +15,17 @@
 <body>
   <h1>Data Logger Setup Experiment</h1>
 
-  <div>
-    <label for="experiment-name">Experiment Name: </label>
-    <input id="experiment-name" maxlength="80" contenteditable="true"
-           value="Experiment 1">
-  </div>
+  <div id="global-config">
+    <div>
+      <label for="experiment-name">Experiment Name: </label>
+      <input id="experiment-name" maxlength="80" contenteditable="true"
+             value="Experiment 1">
+    </div>
 
-  <div>
-    <label for="sample-interval">Sample Interval [Minutes]: </label>
-    <input id="sample-interval" type="number" min="0.2" step="1" value="30" />
+    <div>
+      <label for="sample-interval">Sample Interval [Minutes]: </label>
+      <input id="sample-interval" type="number" min="0.2" step="1" value="30" />
+    </div>
   </div>
 
   <table id="sensors">
