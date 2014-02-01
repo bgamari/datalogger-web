@@ -11,10 +11,14 @@ table#sensors th {
 }
 
 table#sensors tr.inactive {
-    background-color: lightsteelblue;
+    background-color: PapayaWhip;
     transition: background-color 0.5s;
 }
 
+table#sensors tr span.sample-count {
+    font-size: x-large;
+}
+
 tr.sensor button {
-    margin: 0 0.5em;
+    margin: 0 0.1em;
 }
