@@ -2,7 +2,9 @@
 
 module DeviceList ( -- * Device type
                     DeviceName(..)
-                  , Device(devId, devLogger)
+                  , Device(devId)
+                  , devLogger
+                  , getSampleCount
                     -- * Device list
                   , DeviceList
                   , newDeviceList
@@ -30,6 +32,7 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Control.Concurrent
 import Control.Concurrent.STM       
 import Control.Monad (when, forM_, void, liftM, forever)
+import Data.Maybe (mapMaybe)
 
 import DataLogger (DataLogger, DeviceId, Sample)
 import qualified DataLogger as DL
@@ -71,10 +74,12 @@ modifyDeviceMap :: MonadIO m
 modifyDeviceMap f = do
     DL devMap <- DLT ask
     liftIO $ atomically $ modifyTVar devMap f
-                       
-data Device = Device { devPath    :: FilePath   -- ^ Path to serial device
-                     , devLogger  :: DataLogger -- ^ @DataLogger@
-                     , devId      :: DeviceId   -- ^ Unique @DeviceId@
+
+data DeviceBackend = TestDevice
+                   | LocalDevice DataLogger FilePath
+
+data Device = Device { devBackend :: DeviceBackend -- ^ Device backend
+                     , devId      :: DeviceId      -- ^ Unique @DeviceId@
                      , devSamples :: TVar (V.Vector Sample)
                      , devSampleCount :: TVar Int
                      }
@@ -88,25 +93,26 @@ refreshDevices = do
     knownDevices <- withDeviceList return
     
     -- Make sure no devices have disappeared
-    forM_ knownDevices $ \dev->do
-        when (devPath dev `notElem` loggers)
-          $ removeDevice (devId dev)
+    --forM_ knownDevices $ \dev->do
+    --    when (devPath dev `notElem` loggers)
+    --      $ removeDevice (devId dev)
 
     -- Add new devices
-    let newDevs = filter (`notElem` map devPath knownDevices) loggers
-    forM_ newDevs $ \devPath->runEitherT $ addDevice devPath
+    let devPath (Device {devBackend = LocalDevice _ dev}) = Just dev
+        devPath _                                         = Nothing
+        newDevs = filter (`notElem` mapMaybe devPath knownDevices) loggers
+    forM_ newDevs $ \devPath->runEitherT $ addLocalDevice devPath
 
-addDevice :: MonadIO m
+addLocalDevice :: MonadIO m
           => FilePath -> EitherT String (DeviceListT m) DeviceId
-addDevice devPath = do
+addLocalDevice devPath = do
     dl <- DL.open devPath
     EitherT $ liftIO $ runEitherT $ checkRTCTime dl
     devList <- lift $ DLT ask
     devId <- DL.getDeviceId dl
     samples <- liftIO $ newTVarIO V.empty
     sampleCount <- liftIO $ newTVarIO 0
-    let dev = Device { devPath    = devPath
-                     , devLogger  = dl
+    let dev = Device { devBackend = LocalDevice dl devPath
                      , devId      = devId
                      , devSamples = samples
                      , devSampleCount = sampleCount
@@ -115,30 +121,37 @@ addDevice devPath = do
     lift $ modifyDeviceMap $ M.insert devId dev
     return devId
 
+devLogger :: Device -> Maybe DataLogger
+devLogger dev
+  | LocalDevice dl _ <- devBackend dev = Just dl
+  | otherwise                          = Nothing
+  
 fetchWorker :: MonadIO m
             => Device -> EitherT String m ()
-fetchWorker dev = forever $ do
-    count <- DL.getSampleCount (devLogger dev)
+fetchWorker dev
+  | Nothing <- devLogger dev  = error "fetchWorker on un-backed Device"
+  | Just dl <- devLogger dev  = forever $ do
+    count <- DL.getSampleCount dl
     liftIO $ atomically $ writeTVar (devSampleCount dev) count
-    fetchUpTo count
+    fetchUpTo dl count
     liftIO $ threadDelay (5 * 1000* 1000)
   where
     chunkSz = 100
-    fetchUpTo :: MonadIO m => Int -> EitherT String m ()
-    fetchUpTo count = do
+    fetchUpTo :: MonadIO m => DataLogger -> Int -> EitherT String m ()
+    fetchUpTo dl count = do
         n <- liftIO $ atomically $ V.length `fmap` readTVar (devSamples dev)
         case () of
           -- Still have more samples to fetch
           _ | n < count -> do
                 let fetchCount = min (count - n) chunkSz 
-                chunk <- V.fromList <$> DL.getSamples (devLogger dev) n fetchCount
+                chunk <- V.fromList <$> DL.getSamples dl n fetchCount
                 liftIO $ atomically $ modifyTVar (devSamples dev)
                        $ (V.++ chunk)
-                fetchUpTo count
+                fetchUpTo dl count
           -- Sample count has decreased, reset sample cache
             | n > count -> do
                 liftIO $ atomically $ writeTVar (devSamples dev) V.empty
-                fetchUpTo count
+                fetchUpTo dl count
           -- We have all of the available samples
             | otherwise -> return ()
 
@@ -154,6 +167,9 @@ fetch dev = liftIO $ atomically $ do
                      then Just $ FetchProgress (V.length samples) count
                      else Nothing
     return (samples, progress)
+
+getSampleCount :: MonadIO m => Device -> m Int
+getSampleCount = liftIO . atomically . readTVar . devSampleCount               
 
 -- | Check that the RTC time has been set    
 checkRTCTime :: DataLogger -> EitherT String IO ()

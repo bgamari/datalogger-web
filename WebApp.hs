@@ -56,11 +56,18 @@ withDevice action = do
                      html "Can't find device"
       Just dev -> action dev
 
+withBackedDevice :: (Device -> DataLogger -> ActionM ()) -> ActionM ()
+withBackedDevice action = withDevice $ \dev->do
+    case devLogger dev of
+      Nothing  -> do status status404
+                     html "unbacked device"
+      Just dl  -> action dev dl
+    
 getSetting :: (ToJSON a)
            => String -> DL.Setting a -> ScottyM ()
 getSetting settingName setting =
-    get (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
-        value <- liftIO $ runEitherT $ DL.get (devLogger dev) setting
+    get (capture $ "/devices/:device/"<>settingName) $ withBackedDevice $ \dev dl->do
+        value <- liftIO $ runEitherT $ DL.get dl setting
         case value of
           Left error  -> do
             text $ TL.pack error
@@ -74,11 +81,11 @@ getSetting settingName setting =
 putSetting :: (Parsable a, ToJSON a)
            => String -> DL.Setting a -> Bool -> ScottyM ()
 putSetting settingName setting saveNV =
-    post (capture $ "/devices/:device/"<>settingName) $ withDevice $ \dev->do
+    post (capture $ "/devices/:device/"<>settingName) $ withBackedDevice $ \dev dl->do
         value <- param "value"
         result <- liftIO $ runEitherT $ do
-            DL.set (devLogger dev) setting value
-            when saveNV $ DL.saveNVConfig (devLogger dev)
+            DL.set dl setting value
+            when saveNV $ DL.saveNVConfig dl
         case result of
           Left err -> do status status500
                          text $ "Error: "<>TL.pack err
@@ -147,8 +154,8 @@ routes = do
     getPutNVSetting "acquire-on-boot" DL.acquireOnBoot
     getPutNVSetting "name" DL.deviceName
     
-    post "/devices/:device/erase" $ withDevice $ \dev->do
-        withLoggerResult (DL.resetSampleCount (devLogger dev)) $ \_->do
+    post "/devices/:device/erase" $ withBackedDevice $ \dev dl->do
+        withLoggerResult (DL.resetSampleCount dl) $ \_->do
             json $ JSON.object [("success", toJSON True)]
 
     post "/devices/:device/eject" $ withDevice $ \dev->do
@@ -156,8 +163,8 @@ routes = do
         json $ JSON.object [("success", toJSON True)]
         
     get "/devices/:device/sample_count" $ withDevice $ \dev->do
-        withLoggerResult (DL.getSampleCount (devLogger dev)) $ \count->do
-            json $ JSON.object ["value" .= count]
+        count <- getSampleCount dev
+        json $ JSON.object ["value" .= count]
     
     get "/devices/:device/samples/csv" $ withDevice $ \dev->
         getSamplesAction dev Nothing (csv . V.toList)
@@ -165,8 +172,8 @@ routes = do
     get "/devices/:device/samples/json" $ withDevice $ \dev->
         getSamplesAction dev Nothing json
 
-    get "/devices/:device/sensors" $ withDevice $ \dev->do
-        withLoggerResult (DL.getSensors (devLogger dev)) $ \sensors->do
+    get "/devices/:device/sensors" $ withBackedDevice $ \dev dl->do
+        withLoggerResult (DL.getSensors dl) $ \sensors->do
             json sensors
 
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
