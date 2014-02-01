@@ -13,19 +13,19 @@ button.inactive {
     opacity: 0.5;
 }
 
-table#sensors th {
-    text-align: left;
+ul#sensors {
+    display: block;
 }
 
-table#sensors tr.inactive {
+ul#sensors li.inactive {
     background-color: PapayaWhip;
     transition: background-color 0.5s;
 }
 
-table#sensors tr span.sample-count {
-    font-size: x-large;
+ul#sensors li span.sensor-name h3 {
+    display: inline;
 }
 
-tr.sensor button {
-    margin: 0 0.1em;
+ul#sensors li span.sample-count {
+    font-size: x-large;
 }
