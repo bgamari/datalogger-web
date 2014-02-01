@@ -30,29 +30,29 @@ function edit_text($text, $editBtn, text_change_fn) {
 }
 
 function delete_row(uuid) {
-    $row = $('#sensors').find('tr#' + uuid);
+    $row = $('#sensors').find('#s'+uuid);
     $row.fadeOut(400, function(){
         $row.remove();
     });
 }
 
 function set_status_active(uuid, is_active) {
-    var $btn = $("#s" + uuid + " .activate-btn");
+    var $btn = $("#s"+uuid+" .activate-btn");
     var $icon = $btn.find("i");
     if (is_active) {
         $icon.attr('class', 'fa fa-check-circle-o');
         $btn.attr('title', 'Stop logging');
-        $('#sensors').find('tr#' + uuid).removeClass('inactive');
+        $('#sensors').find('#s'+uuid).removeClass('inactive');
     } else {
         $icon.attr('class', 'fa fa-circle-o');
         $btn.attr('title', 'Start logging');
-        $('#sensors').find('tr#' + uuid).addClass('inactive');
+        $('#sensors').find('#s'+uuid).addClass('inactive');
     }
-    $("#s" + uuid + " .activate-btn").attr('data-active', '' + is_active);
+    $("#s"+uuid+" .activate-btn").attr('data-active', ''+is_active);
 }
 
 function set_sensor_name(uuid, name){
-    var $text = $('#' + uuid + " .sensor-name h3");
+    var $text = $('#s'+uuid+" .sensor-name h3");
     $text.text(name);
 }
 
@@ -69,7 +69,7 @@ function add_sensor_row(uuid, sensor_name) {
             .append($("<button><i class='fa fa-pencil'></i></button>")
                     .addClass("edit-btn btn-s")
                     .click(function () {
-                        var $sensor = $('#'+uuid)
+                        var $sensor = $('#s'+uuid)
                         var $editBtn = $sensor.find("span.sensor-name .edit-btn");
                         var $text = $sensor.find("span.sensor-name h3");
                         edit_text($text, $editBtn, function(name) {
@@ -117,7 +117,7 @@ function add_sensor_row(uuid, sensor_name) {
     var $plot_btn = $("<button class='btn btn-sm btn-primary plot-btn' />")
         .append($("<i class='fa fa-bar-chart-o'></i>"))
         .click(function () {
-            $.ajax('/devices/' + uuid + '/samples/json', {
+            $.ajax('/devices/'+uuid+'/samples/json', {
                 success: function (data, error, xhr) {
                     filtered = [];
                     for (i in data) {
@@ -136,7 +136,7 @@ function add_sensor_row(uuid, sensor_name) {
         .append($("<button class='btn btn-sm btn-primary download-btn'/>")
                 .append($("<i class='fa fa-download'></i>"))
                 .click(function () {
-                    location.href = "/devices/" + uuid + "/samples/csv";
+                    location.href = "/devices/"+uuid+"/samples/csv";
                 })
                );
 
