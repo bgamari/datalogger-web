@@ -200,7 +200,7 @@ function add_sensor_row(uuid, sensor_name) {
                     $.ajax("/devices/"+uuid+"/erase", {
                         type: "POST",
                         success: function (data, status, xhr) {
-                            $("#s"+uuid+" span.sample-count").html("0");
+                            get_status(uuid);
                         }
                     });
                 })
