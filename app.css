@@ -31,23 +31,25 @@ ul#sensors {
     transition: background-color 0.5s;
 }
 
-ul#sensors li[data-acquiring="running"] {
+ul#sensors > li {
+    border-top: solid 1px #ddd;
+    padding: 1em 0;
+}
+
+ul#sensors > li[data-acquiring="running"] {
     background-color: #efe;
 }
 
-ul#sensors li[data-acquiring="stopped"] {
+ul#sensors > li[data-acquiring="stopped"] {
     background-color: #fee;
 }
 
-ul#sensors li span.sensor-name {
+ul#sensors > li span.sensor-name {
     padding-right: 2em;
 }
 
-ul#sensors li span.sensor-name h3 {
+ul#sensors > li span.sensor-name h3 {
     display: inline;
-}
-
-ul#sensors li span.sample-count {
 }
 
 /* channels list */
