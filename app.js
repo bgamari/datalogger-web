@@ -59,16 +59,16 @@ function add_sensor(uuid, sensor_name) {
 function refresh_devices() {
     $.ajax("/devices", {
         type: "POST",
-
         success: function(data, status, xhr) {
             for (var idx in data) {
                 var uuid = data[idx].toString();
                 if ($("#sensors").find("#s" + uuid).length == 0) {
                     $.ajax("/devices/" + uuid + "/name", {
                         type: "GET",
+                        context: uuid,
                         success: function (namedata, status2, xhr2) {
                             name = namedata['value'];
-                            add_sensor(uuid, name);
+                            add_sensor(this, name);
                         }
                     })
 
