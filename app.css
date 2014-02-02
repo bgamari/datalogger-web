@@ -38,8 +38,7 @@ ul#sensors {
 }
 
 ul#sensors > li {
-    border-top: solid 1px #ddd;
-    padding: 1em 0;
+    margin: 0.5em 0;
 }
 
 ul#sensors > li[data-acquiring="running"] {
