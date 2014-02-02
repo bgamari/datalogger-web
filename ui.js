@@ -26,7 +26,7 @@ function edit_text($text, $editBtn, text_change_fn) {
     });
     $text.hide();
     $editBtn.hide();
-    $input.appendTo($parent);
+    $input.prependTo($parent);
 }
 
 function delete_row(uuid) {
