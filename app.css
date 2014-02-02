@@ -1,3 +1,9 @@
+body div.container {
+    max-width: 60em;
+    margin-right: auto;
+    margin-left: auto;
+}
+
 form#global-config {
     max-width: 40em;
 }
