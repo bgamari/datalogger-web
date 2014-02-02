@@ -21,9 +21,9 @@ function start_stop_acquire(uuid, acquire) {
                 type: "POST",
                 data: {value: acquire},
             });
-            if(start_acquiring) {
+
+            if (acquire)
                 eject_sensor(uuid);
-            }
         }
     });
 }
