@@ -15,18 +15,26 @@
 <body>
   <img alt="riffle" src="/logo.svg" />
 
-  <div id="global-config">
-    <div>
-      <label for="experiment-name">Experiment Name: </label>
-      <input id="experiment-name" maxlength="80" contenteditable="true"
-             value="Experiment 1">
+  <form class="form-horizontal" id="global-config">
+    <div class="form-group">
+      <label for="experiment-name" class="col-sm-2 control-label">Experiment Name</label>
+      <div class="col-sm-10">
+        <input id="experiment-name" class="form-control" maxlength="80"
+               value="Experiment 1">
+      </div>
     </div>
 
-    <div>
-      <label for="sample-interval">Sample Interval [Minutes]: </label>
-      <input id="sample-interval" type="number" min="0.2" step="1" value="30" />
+    <div class="form-group">
+        <label for="sample-interval" class="col-sm-2 control-label">Sample Interval</label>
+        <div class="col-sm-10">
+          <div class="input-group">
+            <input id="sample-interval" class="form-control" type="number"
+                   min="0.2" step="1" value="30" />
+            <span class="input-group-addon">minutes</span>
+          </div>
+        </div>
     </div>
-  </div>
+  </form>
 
   <ul id="sensors">
   </ul>
