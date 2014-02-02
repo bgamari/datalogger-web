@@ -79,8 +79,11 @@ function refresh_devices() {
     }});
 }
 
-
 function add_new_sensor() {
     var numRows = $("#sensors").find("tr").length;
     add_sensor(numRows + 1);
 }
+
+$(window).load(function() {
+    refresh_devices();
+});
