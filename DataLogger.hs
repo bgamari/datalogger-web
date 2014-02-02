@@ -56,14 +56,14 @@ findDataLoggers = do
     isACM = isSuffixOf "ttyACM" . reverse . dropWhile isDigit . reverse
 
 data DataLogger = DataLogger { handle  :: Handle
-                             , request :: TMVar (String, TMVar [String])
+                             , request :: TQueue (String, TMVar [String])
                              }
 
 open :: MonadIO m => FilePath -> EitherT String m DataLogger
 open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
-    reply <- liftIO $ atomically newEmptyTMVar
-    let dl = DataLogger h reply
+    reqQueue <- liftIO newTQueueIO
+    let dl = DataLogger h reqQueue
     liftIO $ forkIO $ ioWorker dl
     -- Make sure things are working properly
     v <- getVersion dl
@@ -71,7 +71,7 @@ open device = do
     
 ioWorker :: DataLogger -> IO ()
 ioWorker (DataLogger h req) = forever $ do
-    (cmd,replyVar) <- atomically $ takeTMVar req
+    (cmd,replyVar) <- atomically $ readTQueue req
     liftIO $ hPutStr h (cmd ++ "\n")
     reply <- go []
     --print (cmd, reply)
@@ -91,7 +91,7 @@ type Command = String
 command :: MonadIO m => DataLogger -> Command -> EitherT String m [String]
 command (DataLogger _ req) cmd = liftIO $ do
     reply <- atomically $ do reply <- newEmptyTMVar
-                             putTMVar req (cmd, reply)
+                             writeTQueue req (cmd, reply)
                              return reply
     atomically $ takeTMVar reply
 
