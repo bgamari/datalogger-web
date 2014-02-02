@@ -17,6 +17,8 @@ module DeviceList ( -- * Device type
                   , lookupDeviceId
                   , fetch
                   , FetchProgress(..)
+                    -- * Testing
+                  , addTestDevice
                   ) where                
 
 import Control.Error
@@ -104,30 +106,52 @@ refreshDevices = do
     forM_ newDevs $ \devPath->runEitherT $ addLocalDevice devPath
 
 addLocalDevice :: MonadIO m
-          => FilePath -> EitherT String (DeviceListT m) DeviceId
+               => FilePath -> EitherT String (DeviceListT m) DeviceId
 addLocalDevice devPath = do
     dl <- DL.open devPath
     EitherT $ liftIO $ runEitherT $ checkRTCTime dl
-    devList <- lift $ DLT ask
     devId <- DL.getDeviceId dl
     samples <- liftIO $ newTVarIO V.empty
     sampleCount <- liftIO $ newTVarIO 0
-    let dev = Device { devBackend = LocalDevice dl devPath
-                     , devId      = devId
-                     , devSamples = samples
+    let dev = Device { devBackend     = LocalDevice dl devPath
+                     , devId          = devId
+                     , devSamples     = samples
                      , devSampleCount = sampleCount
                      }
     liftIO $ forkIO $ void $ runEitherT $ fetchWorker dev
     lift $ modifyDeviceMap $ M.insert devId dev
     return devId
+    
+addTestDevice :: MonadIO m
+              => DeviceName -> EitherT String (DeviceListT m) DeviceId
+addTestDevice name = do
+    let devId = DL.DevId "test"
+    samples <- liftIO $ newTVarIO V.empty
+    sampleCount <- liftIO $ newTVarIO 0
+    let dev = Device { devBackend     = TestDevice
+                     , devId          = devId
+                     , devSamples     = samples
+                     , devSampleCount = sampleCount
+                     }
+    liftIO $ forkIO $ void $ runEitherT $ fetchTestWorker dev
+    lift $ modifyDeviceMap $ M.insert devId dev
+    return devId
+    
+fetchTestWorker :: MonadIO m => Device -> EitherT String m ()
+fetchTestWorker dev = forever $ do
+    realTime <- round . realToFrac <$> liftIO getPOSIXTime
+    liftIO $ threadDelay (100 * 1000)
+    liftIO $ threadDelay (5 * 1000 * 1000)
+    liftIO $ atomically $ modifyTVar (devSampleCount dev) (+1)
+    let s = DL.Sample realTime (DL.SID 1) 1
+    liftIO $ atomically $ modifyTVar (devSamples dev) (`V.snoc` s)
 
 devLogger :: Device -> Maybe DataLogger
 devLogger dev
   | LocalDevice dl _ <- devBackend dev = Just dl
   | otherwise                          = Nothing
   
-fetchWorker :: MonadIO m
-            => Device -> EitherT String m ()
+fetchWorker :: MonadIO m => Device -> EitherT String m ()
 fetchWorker dev
   | Nothing <- devLogger dev  = error "fetchWorker on un-backed Device"
   | Just dl <- devLogger dev  = forever $ do

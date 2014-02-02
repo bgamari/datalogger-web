@@ -148,6 +148,10 @@ routes = do
         lift refreshDevices
         lift getDeviceList >>= json . map devId
 
+    post "/devices/add-test" $ do
+        lift $ runEitherT $ addTestDevice (DN "hello")
+        status status200
+
     getPutSetting "acquiring" DL.acquiring
     getPutSetting "sample-period" DL.samplePeriod
     getPutSetting "rtc-time" DL.rtcTime
