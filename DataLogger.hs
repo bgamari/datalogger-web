@@ -236,6 +236,7 @@ get dl s = do
     reply <- valueCommand dl (sCommand s) (sName s)
     hoistEither $ sRead s reply
 
+-- | Sample period in milliseconds    
 samplePeriod :: Setting Int
 samplePeriod =
     Setting { sCommand = "T"
