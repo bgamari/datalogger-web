@@ -196,4 +196,5 @@ routes = do
     get "/app.js" $ file "app.js"
     get "/chart.css" $ file "chart.css"
     get "/chart.js" $ file "chart.js"
+    get "/d3.v3.js" $ file "d3.v3.min.js"
 
