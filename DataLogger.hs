@@ -218,7 +218,7 @@ readBool "0" = Right False
 readBool  a  = Left ("Unexpected boolean value: "++a)
           
 saveNVConfig :: MonadIO m => DataLogger -> EitherT String m ()
-saveNVConfig dl = void $ command dl "S"          
+saveNVConfig dl = void $ command dl "NS"          
 
 data Setting a = Setting { sCommand :: String
                          , sName    :: String
@@ -263,7 +263,7 @@ acquiring =
 
 acquireOnBoot :: Setting Bool
 acquireOnBoot =
-    Setting { sCommand = "B"
+    Setting { sCommand = "NB"
             , sName    = "acquire on boot"
             , sRead    = readBool
             , sShow    = showBool
@@ -271,7 +271,7 @@ acquireOnBoot =
 
 deviceName :: Setting String
 deviceName =
-    Setting { sCommand = "N"
+    Setting { sCommand = "NN"
             , sName    = "device name"
             , sRead    = Right . id
             , sShow    = id
