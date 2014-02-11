@@ -34,6 +34,7 @@ import qualified Data.Map as M
 import Data.Maybe (catMaybes)
 import Control.Applicative (pure, (<$>), (<*>))
 import Control.Error
+import Data.EitherR (fmapLT)
 import Control.Monad (void, when, forever)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
@@ -56,7 +57,7 @@ findDataLoggers = do
     isACM = isSuffixOf "ttyACM" . reverse . dropWhile isDigit . reverse
 
 data DataLogger = DataLogger { handle  :: Handle
-                             , request :: TQueue (String, TMVar [String])
+                             , request :: TQueue (String, TMVar (Either String [String]))
                              }
 
 open :: MonadIO m => FilePath -> EitherT String m DataLogger
@@ -68,17 +69,20 @@ open device = do
     -- Make sure things are working properly
     v <- getVersion dl
     return dl
-    
+
+tryIOStr :: IO a -> EitherT String IO a
+tryIOStr = fmapLT show . tryIO
+
 ioWorker :: DataLogger -> IO ()
 ioWorker (DataLogger h req) = forever $ do
     (cmd,replyVar) <- atomically $ readTQueue req
-    liftIO $ hPutStr h (cmd ++ "\n")
-    reply <- go []
-    --print (cmd, reply)
     print cmd
+    reply <- runEitherT $ do
+        tryIOStr $ hPutStr h (cmd ++ "\n")
+        go []
     atomically $ putTMVar replyVar reply
   where
-    go ls = do l <- strip `fmap` liftIO (hGetLine h)
+    go ls = do l <- strip `fmap` tryIOStr (hGetLine h)
                if l == ""
                  then return (reverse ls)
                  else go (l:ls)
@@ -89,11 +93,11 @@ close (DataLogger h _) = liftIO $ hClose h
 type Command = String
      
 command :: MonadIO m => DataLogger -> Command -> EitherT String m [String]
-command (DataLogger _ req) cmd = liftIO $ do
-    reply <- atomically $ do reply <- newEmptyTMVar
-                             writeTQueue req (cmd, reply)
-                             return reply
-    atomically $ takeTMVar reply
+command (DataLogger _ req) cmd = do
+    reply <- liftIO $ atomically $ do reply <- newEmptyTMVar
+                                      writeTQueue req (cmd, reply)
+                                      return reply
+    EitherT $ liftIO $ atomically $ takeTMVar reply
 
 -- | Read a single-line reply 
 simpleCommand :: MonadIO m => DataLogger -> Command -> EitherT String m String
