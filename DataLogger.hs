@@ -203,9 +203,9 @@ parseSample :: String -> Either String Sample
 parseSample l =
   case words l of
     [time, sid, val]  ->
-        Sample <$> readErr "Error parsing time" time
-               <*> fmap SID (readErr "Error parsing sensor ID" sid)
-               <*> readErr "Error parsing value" val
+        Sample <$> readErr ("Error parsing time: "++time) time
+               <*> fmap SID (readErr ("Error parsing sensor ID: "++sid) sid)
+               <*> readErr ("Error parsing value: "++val) val
     _                 ->
         Left "getSamples: Not enough fields"
 
