@@ -80,7 +80,7 @@ ioWorker (DataLogger h req) = forever $ do
     reply <- runEitherT $ do
         tryIOStr $ hPutStr h (cmd ++ "\n")
         go []
-    putStrLn $ either show (show . take 10 . map (take 10)) reply
+    putStrLn $ either show (show . take 10 . map (take 25)) reply
     atomically $ putTMVar replyVar reply
   where
     go ls = do l <- strip `fmap` tryIOStr (hGetLine h)
