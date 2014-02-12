@@ -76,10 +76,11 @@ tryIOStr = fmapLT show . tryIO
 ioWorker :: DataLogger -> IO ()
 ioWorker (DataLogger h req) = forever $ do
     (cmd,replyVar) <- atomically $ readTQueue req
-    print cmd
+    putStr $ take 10 (cmd++repeat ' ') ++ "   =>   "
     reply <- runEitherT $ do
         tryIOStr $ hPutStr h (cmd ++ "\n")
         go []
+    putStrLn $ either show (show . take 10 . map (take 10)) reply
     atomically $ putTMVar replyVar reply
   where
     go ls = do l <- strip `fmap` tryIOStr (hGetLine h)
