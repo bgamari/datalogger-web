@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ExistentialQuantification #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, OverloadedStrings, ExistentialQuantification #-}
 
 module DataLogger ( findDataLoggers
                   , DataLogger
@@ -31,9 +31,8 @@ module DataLogger ( findDataLoggers
                   ) where
 
 import qualified Data.Map as M
-import Text.Trifecta
+import Data.Attoparsec.Char8
 import Data.Monoid
-import Data.Char (isDigit)
 import Data.List as L
 import Data.Maybe (catMaybes)
 import Control.Applicative
@@ -49,7 +48,8 @@ import System.FilePath ((</>))
 import Control.Concurrent
 import Control.Concurrent.STM
 import qualified Data.Csv as Csv
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Char8 (ByteString)
 
 -- | Find possible data logger devices       
 findDataLoggers :: IO [FilePath]
@@ -82,27 +82,26 @@ tryIOStr = fmapLT show . tryIO
 ioWorker :: DataLogger -> IO ()
 ioWorker (DataLogger h req) = forever $ do
     CmdReq cmd replyParser replyVar <- atomically $ readTQueue req
-    putStr $ L.take 10 (cmd++repeat ' ') ++ "   =>   "
+    putStr $ L.take 10 (BS.unpack cmd++repeat ' ') ++ "   =>   "
     reply <- runEitherT $ do
-        tryIOStr $ hPutStr h (cmd <> "\n")
+        tryIOStr $ BS.hPutStr h (cmd <> "\n")
         l <- tryIOStr $ BS.hGet h 1
-        go $ stepParser (parseReply replyParser) mempty l
+        go $ parse (parseReply replyParser) l
     either (\err->putStrLn $ "parse error\n"++err) (const $ putStrLn "") reply
     atomically $ putTMVar replyVar reply
   where
-    go (StepDone _ xs)     = right xs
-    go (StepFail _ error)  = left (show error)
-    go step                = do
+    go (Done _ xs)      = right xs
+    go (Fail unconsumed contexts error)  = left $ show unconsumed<>show contexts<>error
+    go step             = do
         l <- tryIOStr $ BS.hGet h 1
-        liftIO $ print l
-        go $ feed l step
+        go $ feed step l
     parseReply :: Parser a -> Parser [a]
-    parseReply parser = manyTill (parser <* newline) (newline >> eof)
+    parseReply parser = manyTill (parser <* endOfLine) (try $ endOfLine *> endOfInput)
     
 close :: MonadIO m => DataLogger -> m ()
 close (DataLogger h _) = liftIO $ hClose h
 
-type Command = String
+type Command = ByteString
      
 command :: MonadIO m => DataLogger -> Command -> Parser a -> EitherT String m [a]
 command (DataLogger _ req) cmd replyParser = do
@@ -112,25 +111,25 @@ command (DataLogger _ req) cmd replyParser = do
         return replyVar
     EitherT $ liftIO $ atomically $ takeTMVar replyVar
 
-type Key = String
+type Key = ByteString
 
 keyValue :: Parser Key -> Parser a -> Parser (Key, a)
 keyValue keyParser valueParser = do
     key <- keyParser
-    spaces
+    skipSpace
     char '='
-    spaces
+    skipSpace
     value <- valueParser
     return (key, value)
 
-valueCommand :: MonadIO m => DataLogger -> Command -> String
+valueCommand :: MonadIO m => DataLogger -> Command -> Key
              -> Parser a -> EitherT String m a
 valueCommand dl cmd key valueParser = do
     ret <- command dl cmd $ keyValue (string key) valueParser
     case ret of
       [(_,v)] -> right v
-      []      -> left $ "Not enough responses to "<>cmd
-      _       -> left $ "Too many responses to "<>cmd
+      []      -> left $ "Not enough responses to "<>BS.unpack cmd
+      _       -> left $ "Too many responses to "<>BS.unpack cmd
 
 getVersion :: MonadIO m => DataLogger -> EitherT String m String
 getVersion dl = valueCommand dl "V" "version" $ many hexDigit
@@ -148,16 +147,22 @@ data Sensor = Sensor { sensorId   :: SensorId
             deriving (Show)
            
 name :: Parser String
-name = (many $ alphaNum <|> digit <|> oneOf "-_ ") <?> "Token"
+name = (many $ alphaNum <|> satisfy (inClass "-_ ")) <?> "Token"
 
 parseSensorId :: Parser SensorId
-parseSensorId = (SID . fromIntegral) <$> decimal <?> "Sensor ID"
+parseSensorId = (SID . fromIntegral) <$> decimal <?> "sensor ID"
 
 getSensors :: MonadIO m => DataLogger -> EitherT String m [Sensor]
 getSensors dl = do
-    command dl "s" $ Sensor <$> parseSensorId <* spaces <* char '\t'
-                            <*> name          <* spaces <* char '\t'
-                            <*> name          <* spaces
+    command dl "s" $ Sensor <$> parseSensorId <* skipSpace <* char '\t'
+                            <*> name          <* skipSpace <* char '\t'
+                            <*> name
+
+alphaNum :: Parser Char
+alphaNum = letter_ascii <|> digit
+         
+hexDigit :: Parser Char
+hexDigit = satisfy $ inClass "0123456789abcdefABCDEF"
 
 getLastSamples :: MonadIO m => DataLogger -> EitherT String m [Sample]
 getLastSamples dl = command dl "l" $ parseSample
@@ -166,7 +171,7 @@ newtype DeviceId = DevId String
                  deriving (Show, Eq, Ord)
 
 parseDeviceId :: Parser DeviceId
-parseDeviceId = DevId <$> many (hexDigit <|> char '-') <?> "Device ID"
+parseDeviceId = DevId <$> many (hexDigit <|> char '-') <?> "device ID"
 
 getDeviceId :: MonadIO m => DataLogger -> EitherT String m DeviceId
 getDeviceId dl = valueCommand dl "I" "device id" parseDeviceId
@@ -188,33 +193,34 @@ instance Csv.ToRecord Sample where
 
 getSamples :: MonadIO m => DataLogger -> Int -> Int -> EitherT String m [Sample]
 getSamples dl start count = do
-    let cmd = intercalate " " ["g", show start, show count]
+    let cmd = BS.pack $ intercalate " " ["g", show start, show count]
     command dl cmd $ parseSample
 
 parseSample :: Parser Sample
-parseSample = do
-    Sample <$> (decimal <?> "time") <*  spaces
-           <*> parseSensorId        <*  spaces
-           <*> (realToFrac <$> double <?> "value")
+parseSample = p <?> "sample"
+  where
+    p = Sample <$> (decimal <?> "time") <*  skipSpace
+               <*> parseSensorId        <*  skipSpace
+               <*> (realToFrac <$> double <?> "value")
 
 resetSampleCount :: MonadIO m => DataLogger -> EitherT String m ()
 resetSampleCount dl = void $ valueCommand dl "n!" "sample count" $ decimal
 
-showBool :: Bool -> String
+showBool :: Bool -> ByteString
 showBool True  = "1"
 showBool False = "0"
          
 parseBool :: Parser Bool
 parseBool = (char '1' >> return True) <|> (char '0' >> return False)
-            <?> "Boolean"
+            <?> "boolean"
 
 saveNVConfig :: MonadIO m => DataLogger -> EitherT String m ()
 saveNVConfig dl = void $ command dl "NS" $ return ()
 
-data Setting a = Setting { sCommand :: String
-                         , sName    :: String
+data Setting a = Setting { sCommand :: Command
+                         , sName    :: ByteString
                          , sParse   :: Parser a
-                         , sShow    :: a -> String
+                         , sShow    :: a -> ByteString
                          }
                
 set :: MonadIO m => DataLogger -> Setting a -> a -> EitherT String m ()
@@ -232,7 +238,7 @@ samplePeriod =
     Setting { sCommand = "T"
             , sName    = "sample period"
             , sParse   = fromInteger <$> decimal
-            , sShow    = show
+            , sShow    = BS.pack . show
             }
              
 rtcTime :: Setting Int
@@ -240,7 +246,7 @@ rtcTime =
     Setting { sCommand = "t"
             , sName    = "RTC time"
             , sParse   = fromInteger <$> decimal
-            , sShow    = show
+            , sShow    = BS.pack . show
             }
     
 acquiring :: Setting Bool
@@ -264,5 +270,5 @@ deviceName =
     Setting { sCommand = "NN"
             , sName    = "device name"
             , sParse   = name
-            , sShow    = id
+            , sShow    = BS.pack
             }

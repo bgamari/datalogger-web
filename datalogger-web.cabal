@@ -30,7 +30,7 @@ executable datalogger-web
                        serialport >=0.4 && <0.5,
                        scotty >=0.6 && <0.7,
                        text >=0.11 && <1.2,
-                       trifecta,
+                       attoparsec,
                        http-types >=0.8 && <0.9,
                        aeson >=0.6 && <0.8
   default-language:    Haskell2010
