@@ -199,8 +199,8 @@ getSamples dl start count = do
 parseSample :: Parser Sample
 parseSample = p <?> "sample"
   where
-    p = Sample <$> (decimal <?> "time") <*  skipSpace
-               <*> parseSensorId        <*  skipSpace
+    p = Sample <$> (signed decimal <?> "time") <*  skipSpace
+               <*> parseSensorId               <*  skipSpace
                <*> (realToFrac <$> double <?> "value")
 
 resetSampleCount :: MonadIO m => DataLogger -> EitherT String m ()
