@@ -95,7 +95,6 @@ ioWorker (DataLogger h req) = forever $ do
     reply <- runEitherT $ do
         tryIOStr $ BS.hPutStr h (cmd <> "\n")
         l <- readReply h
-        liftIO $ print l
         hoistEither $ parseOnly (parseReply replyParser) l
     either (\err->putStrLn $ "parse error\n"++err) (const $ putStrLn "") reply
     atomically $ putTMVar replyVar reply
