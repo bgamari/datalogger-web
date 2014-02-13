@@ -79,24 +79,29 @@ open device = do
 tryIOStr :: IO a -> EitherT String IO a
 tryIOStr = fmapLT show . tryIO
 
+readReply :: Handle -> EitherT String IO BS.ByteString
+readReply h = go BS.empty
+  where
+    go bs = do
+      l <- tryIOStr $ BS.hGetLine h
+      if BS.null l
+        then return bs
+        else go $ bs<>l<>"\n"
+
 ioWorker :: DataLogger -> IO ()
 ioWorker (DataLogger h req) = forever $ do
     CmdReq cmd replyParser replyVar <- atomically $ readTQueue req
     putStr $ L.take 10 (BS.unpack cmd++repeat ' ') ++ "   =>   "
     reply <- runEitherT $ do
         tryIOStr $ BS.hPutStr h (cmd <> "\n")
-        l <- tryIOStr $ BS.hGet h 1
-        go $ parse (parseReply replyParser) l
+        l <- readReply h
+        liftIO $ print l
+        hoistEither $ parseOnly (parseReply replyParser) l
     either (\err->putStrLn $ "parse error\n"++err) (const $ putStrLn "") reply
     atomically $ putTMVar replyVar reply
   where
-    go (Done _ xs)      = right xs
-    go (Fail unconsumed contexts error)  = left $ show unconsumed<>show contexts<>error
-    go step             = do
-        l <- tryIOStr $ BS.hGet h 1
-        go $ feed step l
     parseReply :: Parser a -> Parser [a]
-    parseReply parser = manyTill (parser <* endOfLine) (try $ endOfLine *> endOfInput)
+    parseReply parser = many $ parser <* endOfLine
     
 close :: MonadIO m => DataLogger -> m ()
 close (DataLogger h _) = liftIO $ hClose h
