@@ -154,8 +154,8 @@ parseSensorId = (SID . fromIntegral) <$> decimal <?> "sensor ID"
 
 getSensors :: MonadIO m => DataLogger -> EitherT String m [Sensor]
 getSensors dl = do
-    command dl "s" $ Sensor <$> parseSensorId <* skipSpace <* char '\t'
-                            <*> name          <* skipSpace <* char '\t'
+    command dl "s" $ Sensor <$> parseSensorId <* char '\t'
+                            <*> name          <* char '\t'
                             <*> name
 
 alphaNum :: Parser Char
