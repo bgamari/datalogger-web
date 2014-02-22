@@ -8,9 +8,12 @@ module DataLogger ( findDataLoggers
                   , getSampleCount
                   , getDeviceId
                   , DeviceId(..)
-                  , getSensors
                   , SensorId(..)
+                  , MeasurableId(..)
                   , Sensor(..)
+                  , getSensors
+                  , Measurable(..)
+                  , getMeasurables
                   , getLastSamples
                     -- * Fetching samples
                   , forceSample
@@ -146,21 +149,31 @@ forceSample dl = void $ command dl "f" $ return ()
 
 data Sensor = Sensor { sensorId   :: SensorId
                      , sensorName :: String
-                     , sensorUnit :: String
                      }
             deriving (Show)
            
 name :: Parser String
 name = (many $ alphaNum <|> satisfy (inClass "-_ ")) <?> "Token"
 
-parseSensorId :: Parser SensorId
-parseSensorId = (SID . fromIntegral) <$> decimal <?> "sensor ID"
-
-getSensors :: MonadIO m => DataLogger -> EitherT String m [Sensor]
+getSensors :: MonadIO m
+           => DataLogger -> EitherT String m [Sensor]
 getSensors dl = do
     command dl "s" $ Sensor <$> parseSensorId <* char '\t'
                             <*> name          <* char '\t'
-                            <*> name
+
+data Measurable = Measurable { measurableId :: MeasurableId
+                             , measurableName :: String
+                             , measurableUnit :: String
+                             }
+                deriving (Show)
+                
+getMeasurables :: MonadIO m
+               => DataLogger -> SensorId -> EitherT String m [Measurable]
+getMeasurables dl (SID sid) = do
+    command dl (BS.pack $ "m "<>show sid)
+    $ Measurable <$> parseMeasurableId <* char '\t'
+                 <*> name              <* char '\t'
+                 <*> name
 
 alphaNum :: Parser Char
 alphaNum = letter_ascii <|> digit
@@ -183,15 +196,26 @@ getDeviceId dl = valueCommand dl "I" "device id" parseDeviceId
 newtype SensorId = SID Int
                  deriving (Show, Ord, Eq, Csv.ToField)
 
-data Sample = Sample { sampleTime   :: Integer
-                     , sampleSensor :: SensorId
-                     , sampleValue  :: Float
+parseSensorId :: Parser SensorId
+parseSensorId = (SID . fromIntegral) <$> decimal <?> "sensor ID"
+
+newtype MeasurableId = MID Int
+                 deriving (Show, Ord, Eq, Csv.ToField)
+
+parseMeasurableId :: Parser MeasurableId
+parseMeasurableId = (MID . fromIntegral) <$> decimal <?> "measurable ID"
+
+data Sample = Sample { sampleTime       :: Integer
+                     , sampleSensor     :: SensorId
+                     , sampleMeasurable :: MeasurableId
+                     , sampleValue      :: Float
                      }
             deriving (Show)
 
 instance Csv.ToRecord Sample where
     toRecord s = Csv.record [ Csv.toField (sampleTime s)
                             , Csv.toField (sampleSensor s)
+                            , Csv.toField (sampleMeasurable s)
                             , Csv.toField (sampleValue s)
                             ]
 
@@ -205,6 +229,7 @@ parseSample = p <?> "sample"
   where
     p = Sample <$> (signed decimal <?> "time") <*  skipSpace
                <*> parseSensorId               <*  skipSpace
+               <*> parseMeasurableId           <*  skipSpace
                <*> (realToFrac <$> double <?> "value")
 
 resetSampleCount :: MonadIO m => DataLogger -> EitherT String m ()

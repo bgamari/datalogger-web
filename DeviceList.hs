@@ -143,7 +143,7 @@ fetchTestWorker dev = forever $ do
     liftIO $ threadDelay (100 * 1000)
     liftIO $ threadDelay (5 * 1000 * 1000)
     liftIO $ atomically $ modifyTVar (devSampleCount dev) (+1)
-    let s = DL.Sample realTime (DL.SID 1) 1
+    let s = DL.Sample realTime (DL.SID 1) (DL.MID 1) 1
     liftIO $ atomically $ modifyTVar (devSamples dev) (`V.snoc` s)
 
 devLogger :: Device -> Maybe DataLogger

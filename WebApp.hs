@@ -28,14 +28,21 @@ import DeviceList
 deriving instance Parsable DeviceId
 deriving instance Parsable DeviceName
 deriving instance Parsable DL.SensorId
+deriving instance Parsable DL.MeasurableId
 
 deriving instance ToJSON DeviceId
 deriving instance ToJSON DL.SensorId
+deriving instance ToJSON DL.MeasurableId
 
 instance ToJSON DL.Sensor where
     toJSON s = JSON.object [ "sensor_id" .= DL.sensorId s
                            , "name"      .= DL.sensorName s
-                           , "unit"      .= DL.sensorUnit s
+                           ]
+
+instance ToJSON DL.Measurable where
+    toJSON s = JSON.object [ "sensor_id" .= DL.measurableId s
+                           , "name"      .= DL.measurableName s
+                           , "unit"      .= DL.measurableUnit s
                            ]
 
 type ScottyM = ScottyT TL.Text (DeviceListT IO)
@@ -110,6 +117,7 @@ instance ToJSON DL.Sample where
     toJSON s =
       JSON.object [ "time"   .= DL.sampleTime s
                   , "sensor" .= case DL.sampleSensor s of DL.SID n -> n
+                  , "measurable" .= case DL.sampleMeasurable s of DL.MID n -> n
                   , "value"  .= DL.sampleValue s
                   ]
 
@@ -179,6 +187,11 @@ routes = do
     get "/devices/:device/sensors" $ withBackedDevice $ \dev dl->do
         withLoggerResult (DL.getSensors dl) $ \sensors->do
             json sensors
+
+    get "/devices/:device/sensors/:sensor/measurables" $ withBackedDevice $ \dev dl->do
+        sensor <- param "sensor"
+        withLoggerResult (DL.getMeasurables dl sensor) $ \measurables->do
+            json measurables
 
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
         sensor <- param "sensor"
