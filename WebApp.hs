@@ -3,6 +3,7 @@
              TypeSynonymInstances #-}
                 
 import Data.Monoid       
+import Data.Foldable       
 import Data.Traversable hiding (mapM)
 import Control.Applicative ((<$>))
 import Control.Monad (forM_, when, void)
@@ -10,6 +11,7 @@ import Control.Monad.IO.Class
 import Control.Monad.Reader
 import Control.Monad.Trans.Class
 import Control.Concurrent.STM       
+import qualified Data.Map as M
 
 import qualified Data.Text.Lazy as TL
 import qualified Data.Vector as V
@@ -21,9 +23,10 @@ import Data.Aeson (ToJSON(..), FromJSON(..), (.=))
 import qualified Data.Aeson as JSON
 import Web.Scotty.Trans hiding (ScottyM, ActionM)
 
-import DataLogger (DataLogger, DeviceId, Sample)
+import DataLogger (DataLogger, DeviceId, Sample, SensorId, MeasurableId)
 import qualified DataLogger as DL
 import DeviceList
+import Average
 
 deriving instance Parsable DeviceId
 deriving instance Parsable DeviceName
@@ -40,13 +43,21 @@ instance ToJSON DL.Sensor where
                            ]
 
 instance ToJSON DL.Measurable where
-    toJSON s = JSON.object [ "sensor_id" .= DL.measurableId s
-                           , "name"      .= DL.measurableName s
-                           , "unit"      .= DL.measurableUnit s
+    toJSON s = JSON.object [ "measurable_id" .= DL.measurableId s
+                           , "name"          .= DL.measurableName s
+                           , "unit"          .= DL.measurableUnit s
                            ]
 
 type ScottyM = ScottyT TL.Text (DeviceListT IO)
 type ActionM = ActionT TL.Text (DeviceListT IO)
+
+data SensorMeasurables = SM DL.Sensor [DL.Measurable]
+
+instance ToJSON SensorMeasurables where
+    toJSON (SM s m) = JSON.object [ "sensor_id"   .= DL.sensorId s
+                                  , "name"        .= DL.sensorName s
+                                  , "measurables" .= m
+                                  ]
 
 main = do 
     devList <- newDeviceList
@@ -126,18 +137,50 @@ csv xs = do
     setHeader "Content-Type" "text/plain"
     raw $ Csv.encode xs
 
-getSamplesAction :: Device -> Maybe DL.SensorId
+filterSensor :: DL.SensorId -> Sample -> Bool
+filterSensor sensor s = DL.sampleSensor s == sensor
+
+filterMeasurable :: DL.SensorId -> DL.MeasurableId -> Sample -> Bool
+filterMeasurable sensor measurable s =
+    DL.sampleSensor s == sensor && DL.sampleMeasurable s == measurable
+
+data Pair a b = Pair a b
+              deriving (Show)
+            
+instance (Monoid a, Monoid b) => Monoid (Pair a b) where
+     mempty = Pair mempty mempty
+     Pair a b `mappend` Pair x y = Pair (a <> x) (b <> y)
+
+decimate :: Integer -> V.Vector Sample -> [Sample]
+decimate res = go
+  where
+    averageMeasurables :: V.Vector Sample -> [Sample]
+    averageMeasurables samples =
+      let a :: M.Map (SensorId, MeasurableId) (Pair (Average Double) (Average Float))
+          a = foldMap (\s->M.singleton (DL.sampleSensor s, DL.sampleMeasurable s)
+                           $ Pair (average $ realToFrac $ DL.sampleTime s)
+                                  (average $ DL.sampleValue s))
+                      samples
+          avgSamples = map (\((sid,mid), Pair t v)->DL.Sample (round $ getAverage t) sid mid (getAverage v))
+                           (M.assocs a)
+      in avgSamples
+    go samples
+      | V.null samples = []
+      | DL.Sample {DL.sampleTime=startTime} <- V.head samples =
+        let (ss, rest) = V.span (\s->startTime + res < DL.sampleTime s) samples
+        in averageMeasurables ss ++ go rest
+
+getSamplesAction :: Device -> (Sample -> Bool)
                  -> (V.Vector Sample -> ActionM ()) -> ActionM ()
-getSamplesAction dev sensor format = do
-    let filterSensor = maybe id (\sensor->V.filter (\s->DL.sampleSensor s == sensor)) sensor
+getSamplesAction dev filterFn format = do
     result <- lift (fetch dev)
     case result of 
-      (samples, Nothing) -> format (filterSensor samples)
+      (samples, Nothing) -> format $ V.filter filterFn samples
       (samples, Just (FetchProgress done total)) -> do
           addHeader "X-Samples-Done" (TL.pack $ show done)
           addHeader "X-Samples-Total" (TL.pack $ show total)
           
-          format (filterSensor samples)
+          format $ V.filter filterFn $ samples
           status status202
 
 withLoggerResult :: EitherT String IO a -> (a -> ActionM ()) -> ActionM ()
@@ -179,10 +222,10 @@ routes = do
         json $ JSON.object ["value" .= count]
     
     get "/devices/:device/samples/csv" $ withDevice $ \dev->
-        getSamplesAction dev Nothing (csv . V.toList)
+        getSamplesAction dev (const True) (csv . V.toList)
 
     get "/devices/:device/samples/json" $ withDevice $ \dev->
-        getSamplesAction dev Nothing json
+        getSamplesAction dev (const True) json
 
     get "/devices/:device/sensors" $ withBackedDevice $ \dev dl->do
         withLoggerResult (DL.getSensors dl) $ \sensors->do
@@ -193,13 +236,18 @@ routes = do
         withLoggerResult (DL.getMeasurables dl sensor) $ \measurables->do
             json measurables
 
+    get "/devices/:device/sensors/:sensor/samples/json" $ withBackedDevice $ \dev dl->do
+        sensor <- param "sensor"
+        withLoggerResult (DL.getMeasurables dl sensor) $ \measurables->do
+            json measurables
+
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
         sensor <- param "sensor"
-        getSamplesAction dev (Just sensor) (csv . V.toList)
+        getSamplesAction dev (filterSensor sensor) (csv . V.toList)
 
     get "/devices/:device/sensors/:sensor/samples/json" $ withDevice $ \dev->do
         sensor <- param "sensor"
-        getSamplesAction dev (Just sensor) json
+        getSamplesAction dev (filterSensor sensor) json
 
     get "/" $ file "index.html"
     get "/logo.svg" $ file "logo.svg"
