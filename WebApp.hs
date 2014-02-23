@@ -171,16 +171,18 @@ decimate res = go
         in averageMeasurables ss ++ go rest
 
 getSamplesAction :: Device -> (Sample -> Bool)
-                 -> (V.Vector Sample -> ActionM ()) -> ActionM ()
+                 -> ([Sample] -> ActionM ()) -> ActionM ()
 getSamplesAction dev filterFn format = do
     result <- lift (fetch dev)
+    resolution <- reqHeader "resolution"
+    let decim = maybe V.toList decimate (resolution >>= readMay . TL.unpack)
     case result of 
-      (samples, Nothing) -> format $ V.filter filterFn samples
+      (samples, Nothing) -> format $ decim $ V.filter filterFn samples
       (samples, Just (FetchProgress done total)) -> do
           addHeader "X-Samples-Done" (TL.pack $ show done)
           addHeader "X-Samples-Total" (TL.pack $ show total)
           
-          format $ V.filter filterFn $ samples
+          format $ decim $ V.filter filterFn samples
           status status202
 
 withLoggerResult :: EitherT String IO a -> (a -> ActionM ()) -> ActionM ()
@@ -222,7 +224,7 @@ routes = do
         json $ JSON.object ["value" .= count]
     
     get "/devices/:device/samples/csv" $ withDevice $ \dev->
-        getSamplesAction dev (const True) (csv . V.toList)
+        getSamplesAction dev (const True) csv
 
     get "/devices/:device/samples/json" $ withDevice $ \dev->
         getSamplesAction dev (const True) json
@@ -243,7 +245,7 @@ routes = do
 
     get "/devices/:device/sensors/:sensor/samples/csv" $ withDevice $ \dev->do
         sensor <- param "sensor"
-        getSamplesAction dev (filterSensor sensor) (csv . V.toList)
+        getSamplesAction dev (filterSensor sensor) csv
 
     get "/devices/:device/sensors/:sensor/samples/json" $ withDevice $ \dev->do
         sensor <- param "sensor"
