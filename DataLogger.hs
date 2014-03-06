@@ -42,6 +42,7 @@ import Control.Applicative
 import Control.Error
 import Data.EitherR (fmapLT)
 import Control.Monad (void, when, forever)
+import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class
 import System.Hardware.Serialport
 import System.IO       
@@ -94,12 +95,13 @@ readReply h = go BS.empty
 ioWorker :: FilePath -> DataLogger -> IO ()
 ioWorker device (DataLogger h req) = forever $ do
     CmdReq cmd replyParser replyVar <- atomically $ readTQueue req
-    putStr $ L.take 10 (BS.unpack cmd++repeat ' ') ++ "   =>   "
+    liftIO $ putStr $ L.take 10 (BS.unpack cmd++repeat ' ')++"   ==>   "
     reply <- runEitherT $ do
-        tryIOStr $ BS.hPutStr h (cmd <> "\n")
-        l <- readReply h
-        hoistEither $ parseOnly (parseReply replyParser) l
-    either (\err->putStrLn $ "communication error with\n"++err) (const $ putStrLn "") reply
+        tryIOStr $ BS.hPutStrLn h cmd
+        reply <- readReply h
+        liftIO $ BS.putStr $ BS.take 30 reply
+        hoistEither $ parseOnly (parseReply replyParser) reply
+    putStrLn $ either errorMsg (const "") reply
     atomically $ putTMVar replyVar reply
   where
     errorMsg err = device++": communication error: "++err
