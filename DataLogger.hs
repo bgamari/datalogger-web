@@ -74,7 +74,7 @@ open device = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
     reqQueue <- liftIO newTQueueIO
     let dl = DataLogger h reqQueue
-    liftIO $ forkIO $ ioWorker dl
+    liftIO $ forkIO $ ioWorker device dl
     -- Make sure things are working properly
     v <- getVersion dl
     return dl
@@ -91,17 +91,18 @@ readReply h = go BS.empty
         then return bs
         else go $ bs<>l<>"\n"
 
-ioWorker :: DataLogger -> IO ()
-ioWorker (DataLogger h req) = forever $ do
+ioWorker :: FilePath -> DataLogger -> IO ()
+ioWorker device (DataLogger h req) = forever $ do
     CmdReq cmd replyParser replyVar <- atomically $ readTQueue req
     putStr $ L.take 10 (BS.unpack cmd++repeat ' ') ++ "   =>   "
     reply <- runEitherT $ do
         tryIOStr $ BS.hPutStr h (cmd <> "\n")
         l <- readReply h
         hoistEither $ parseOnly (parseReply replyParser) l
-    either (\err->putStrLn $ "parse error\n"++err) (const $ putStrLn "") reply
+    either (\err->putStrLn $ "communication error with\n"++err) (const $ putStrLn "") reply
     atomically $ putTMVar replyVar reply
   where
+    errorMsg err = device++": communication error: "++err
     parseReply :: Parser a -> Parser [a]
     parseReply parser = many $ parser <* endOfLine
     
