@@ -93,17 +93,22 @@ readReply h = go BS.empty
         else go $ bs<>l<>"\n"
 
 ioWorker :: FilePath -> DataLogger -> IO ()
-ioWorker device (DataLogger h req) = forever $ do
-    CmdReq cmd replyParser replyVar <- atomically $ readTQueue req
-    liftIO $ putStr $ L.take 10 (BS.unpack cmd++repeat ' ')++"   ==>   "
-    reply <- runEitherT $ do
-        tryIOStr $ BS.hPutStrLn h cmd
-        reply <- readReply h
-        liftIO $ BS.putStr $ BS.take 30 reply
-        hoistEither $ parseOnly (parseReply replyParser) reply
-    putStrLn $ either errorMsg (const "") reply
-    atomically $ putTMVar replyVar reply
+ioWorker device (DataLogger h req) = loop
   where
+    loop = do
+      CmdReq cmd replyParser replyVar <- liftIO $ atomically $ readTQueue req
+      liftIO $ putStr $ L.take 10 (BS.unpack cmd++repeat ' ')++"   ==>   "
+      reply <- liftIO $ runEitherT $ do
+          tryIOStr $ BS.hPutStrLn h cmd
+          reply <- readReply h
+          liftIO $ BS.putStr $ BS.take 30 reply
+          hoistEither $ parseOnly (parseReply replyParser) reply
+      liftIO $ putStrLn $ either errorMsg (const "") reply
+      atomically $ putTMVar replyVar reply
+      case reply of
+        Left _  -> hClose h
+        Right _ -> loop
+
     errorMsg err = device++": communication error: "++err
     parseReply :: Parser a -> Parser [a]
     parseReply parser = many $ parser <* endOfLine
