@@ -85,5 +85,6 @@ function add_new_sensor() {
 }
 
 $(window).load(function() {
-    refresh_devices();
+    poll = function() {refresh_devices(); setTimeout(poll, 5000);}
+    poll();
 });
