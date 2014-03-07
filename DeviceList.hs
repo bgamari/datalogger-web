@@ -34,7 +34,8 @@ import Data.Time.Clock.POSIX (getPOSIXTime)
 import Control.Concurrent
 import Control.Concurrent.STM       
 import Control.Monad (when, forM_, void, liftM, forever)
-import Data.Maybe (mapMaybe)
+import Data.Maybe (mapMaybe, listToMaybe)
+import Data.Traversable (traverse)
 
 import DataLogger (DataLogger, DeviceId, Sample)
 import qualified DataLogger as DL
@@ -69,6 +70,13 @@ getDeviceList = M.elems `liftM` getDeviceMap
 
 getDeviceMap :: MonadIO m => DeviceListT m (M.Map DeviceId Device)
 getDeviceMap = liftIO . atomically . readTVar . getDL =<< DLT ask
+
+deviceFromPath :: MonadIO m => FilePath -> DeviceListT m (Maybe Device)
+deviceFromPath path = withDeviceMap
+    $ return . listToMaybe . filter (f . devBackend) . M.elems
+  where
+    f (LocalDevice _ path') | path == path' = True
+    f _                                     = False
 
 modifyDeviceMap :: MonadIO m
                 => (M.Map DeviceId Device -> M.Map DeviceId Device)
@@ -108,7 +116,11 @@ refreshDevices = do
 addLocalDevice :: MonadIO m
                => FilePath -> EitherT String (DeviceListT m) DeviceId
 addLocalDevice devPath = do
-    dl <- DL.open devPath
+    list <- lift $ DLT ask
+    let removalHook = void $ runDeviceListT list $ do
+          dev <- deviceFromPath devPath
+          traverse (removeDevice . devId) dev
+    dl <- DL.open devPath removalHook
     EitherT $ liftIO $ runEitherT $ checkRTCTime dl
     devId <- DL.getDeviceId dl
     samples <- liftIO $ newTVarIO V.empty

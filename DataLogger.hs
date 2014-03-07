@@ -71,12 +71,12 @@ data DataLogger = DataLogger { handle  :: Handle
                              , request :: TQueue CmdReq
                              }
 
-open :: MonadIO m => FilePath -> EitherT String m DataLogger
-open device = do
+open :: MonadIO m => FilePath -> IO () -> EitherT String m DataLogger
+open device removalHook = do
     h <- liftIO $ hOpenSerial device defaultSerialSettings
     reqQueue <- liftIO newTQueueIO
     let dl = DataLogger h reqQueue
-    liftIO $ forkIO $ ioWorker device dl
+    liftIO $ forkIO $ ioWorker device dl removalHook
     -- Make sure things are working properly
     v <- getVersion dl
     return dl
@@ -93,8 +93,8 @@ readReply h = go BS.empty
         then return bs
         else go $ bs<>l<>"\n"
 
-ioWorker :: FilePath -> DataLogger -> IO ()
-ioWorker device (DataLogger h req) = loop
+ioWorker :: FilePath -> DataLogger -> IO () -> IO ()
+ioWorker device (DataLogger h req) removalHook = loop
   where
     loop = do
       CmdReq cmd replyParser replyVar <- liftIO $ atomically $ readTQueue req
@@ -107,7 +107,7 @@ ioWorker device (DataLogger h req) = loop
       liftIO $ putStrLn $ either errorMsg (const "") reply
       atomically $ putTMVar replyVar reply
       case reply of
-        Left _  -> hClose h
+        Left _  -> hClose h >> removalHook
         Right _ -> loop
 
     errorMsg err = device++": communication error: "++err
