@@ -107,7 +107,7 @@ ioWorker device (DataLogger h req) removalHook = loop
       liftIO $ putStrLn $ either errorMsg (const "") reply
       atomically $ putTMVar replyVar reply
       case reply of
-        Left _  -> hClose h >> removalHook
+        Left _  -> removalHook >> hClose h
         Right _ -> loop
 
     errorMsg err = device++": communication error: "++err
