@@ -44,6 +44,7 @@ import Data.EitherR (fmapLT)
 import Control.Monad (void, when, forever)
 import Control.Monad.Trans.Class (lift)
 import Control.Monad.IO.Class
+import System.FilePath       
 import System.Hardware.Serialport
 import System.IO       
 import Data.List (isSuffixOf, intercalate)
@@ -62,7 +63,7 @@ findDataLoggers = do
     devices <- getDirectoryContents root
     return $ map (root </>) $ filter isACM devices
   where
-    isACM = isSuffixOf "ttyACM" . reverse . dropWhile isDigit . reverse
+    isACM fname = any (`isPrefixOf` takeFileName fname) ["ttyACM", "tty.usb"]
 
 data CmdReq = forall a. CmdReq Command (Parser a) (TMVar (Either String [a]))
 
